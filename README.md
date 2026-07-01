@@ -44,9 +44,19 @@ Every arch feed ships the same GL GUI panel (`gl-sdk4-*`, `Architecture: all`). 
 Easiest — the script auto-detects arch, checks free space, and picks full vs `-micro`:
 
 ```sh
+# inspect only, changes nothing:
+curl -fsSL https://digitalcybersoft.github.io/glinet-tailscale-feed/setup.sh | sh -s -- --dry-run
+# install:
+curl -fsSL https://digitalcybersoft.github.io/glinet-tailscale-feed/setup.sh | sh
+```
+
+Piping is safe: the script never `read`s from a non-tty, so it won't hang or eat stdin.
+Download it first only if you want the interactive "flash is tight, use -micro?" prompt during
+a real install (piped, that question auto-answers "keep full"):
+```sh
 curl -fsSL https://digitalcybersoft.github.io/glinet-tailscale-feed/setup.sh -o /tmp/setup.sh
-sh /tmp/setup.sh --dry-run     # inspect only, changes nothing
-sh /tmp/setup.sh               # install
+sh /tmp/setup.sh --dry-run     # or --full / --micro to force a tier
+sh /tmp/setup.sh
 ```
 
 Manual equivalent:
