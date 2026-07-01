@@ -20,16 +20,35 @@ architecture-independent shell/Lua/JS — no compiled code) and repackaged for `
 The `tailscale` binary is cross-compiled from upstream source (`GOARCH=mips GOMIPS=softfloat`,
 `ts_include_cli`, `-s -w`), the same approach as GL's `small-tailscale` branch.
 
-## Install (full GUI panel)
+## Architectures
+
+GL.iNet dropped Tailscale across several device families. This feed rebuilds it for all of them.
+Find your device's arch with `opkg print-architecture`, then use the matching feed path:
+
+| Feed path (arch) | GL devices (examples) |
+|---|---|
+| `mips_24kc` | ath79 / QCA95xx — GL-E750, E750V2, AR750, MT300N |
+| `mipsel_24kc` | ramips mt7621/mt7628 — MT1300 Beryl, MT300N-V2, SFT1200 |
+| `arm_cortex-a7` / `arm_cortex-a7_neon-vfpv4` | ipq40xx — AR750S Slate, B1300, A1300 |
+| `arm_cortex-a15_neon-vfpv4` | ipq806x — B2200 |
+| `arm_cortex-a9_vfpv3-d16` | mvebu (armada-38x) |
+| `aarch64_cortex-a53` | mt7981 / ipq807x / ipq60xx — Flint, Spitz AX, XE3000 |
+
+Every arch feed ships the same GL GUI panel (`gl-sdk4-*`, `Architecture: all`). `tailscale-micro`
+(size-minimized) is provided for `mips_24kc`; ask if you want it built for another arch.
+
+## Install (any device)
 
 ```sh
-echo "src/gz glimips https://digitalcybersoft.github.io/glinet-tailscale-feed/mips_24kc" >> /etc/opkg/customfeeds.conf
+ARCH=$(opkg print-architecture | awk '/tailscale|cortex|mips/{print $2}' | tail -1)   # or set manually
+echo "src/gz glits https://digitalcybersoft.github.io/glinet-tailscale-feed/$ARCH" >> /etc/opkg/customfeeds.conf
 opkg update
 opkg install --nocheck-signature tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview
 ```
-The panel appears under **Applications → Tailscale** in the GL admin UI (the postinst reloads
-rpcd/nginx; refresh the page, or reboot if it doesn't show). If `opkg` rejects the unsigned feed,
-comment out `option check_signature` in `/etc/opkg.conf`.
+Panel appears under **Applications -> Tailscale** in the GL admin UI (postinst reloads rpcd/nginx;
+refresh or reboot if needed). If opkg rejects the unsigned feed, comment out `option check_signature`
+in `/etc/opkg.conf`. If it rejects the arch, add `--force-architecture`.
+
 
 ### Low flash (GL-E750 ~16MB internal)
 Use `tailscale-micro` instead of `tailscale`, and/or install to attached storage

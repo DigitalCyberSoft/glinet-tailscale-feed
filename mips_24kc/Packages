@@ -3,26 +3,26 @@ Version: git-2025.115.15781-4b8df63-1
 Depends: libc, coreutils, coreutils-timeout, tailscale, libuci-lua
 Source: feeds/glinet/gl-sdk4-tailscale
 Section: base
-Architecture: mips_24kc
+Architecture: all
 Installed-Size: 6328
 Description: TAILSCALE Info API for Gl.inet
-Filename: gl-sdk4-tailscale_git-2025.115.15781-4b8df63-1_mips_24kc.ipk
-Size: 7148
-SHA256sum: 74e76818ff5013718a449b673b76a2076fee4fd566a03d719ebd054615f353ac
-MD5Sum: f5d3afbd885118621f15cc5a765e15d0
+Filename: gl-sdk4-tailscale_git-2025.115.15781-4b8df63-1_all.ipk
+Size: 7152
+SHA256sum: 621898ac71b89fefcf949a1aaf249fb60908ba578ef7868936ad632e85f6810d
+MD5Sum: 19594f17fc093940227054d63ed2b633
 
 Package: gl-sdk4-ui-tailscaleview
 Version: git-2025.244.27716-e9a0fdd-1
 Depends: libc, gl-sdk4-tailscale, gl-sdk4-ui-core
 Source: feeds/glinet/gl-ui4.0/module/tailscaleview
 Section: base
-Architecture: mips_24kc
+Architecture: all
 Installed-Size: 16446
 Description: gl-sdk4-ui-tailscaleview
-Filename: gl-sdk4-ui-tailscaleview_git-2025.244.27716-e9a0fdd-1_mips_24kc.ipk
-Size: 17674
-SHA256sum: 95a11e7b8d8cc04ec55bd79918ba7a8ddabc17f5af00032d4ee3ea6d9b534e54
-MD5Sum: cbe3fb76bef4674a735806e0598ec69e
+Filename: gl-sdk4-ui-tailscaleview_git-2025.244.27716-e9a0fdd-1_all.ipk
+Size: 17672
+SHA256sum: 8114fa8576208b2bf4c5945962f1a3ce2128ab4eab30a29d2fafbcf4fa1b69f1
+MD5Sum: 7cb3cb5d3827496cf5f1c521b3084062
 
 Package: tailscale-micro
 Version: 1.98.8-micro2
@@ -33,11 +33,11 @@ Section: net
 Architecture: mips_24kc
 Installed-Size: 17301745
 Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
-Description: Tailscale VPN size-minimized (no netstack/DNS), binary only. Pairs with
+Description: Tailscale (tailscale-micro) for mips_24kc, current 1.98.8 softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale.
 Filename: tailscale-micro_1.98.8-micro2_mips_24kc.ipk
-Size: 5825048
-SHA256sum: dcc3a4364060c0f477ddd2e1e906ac177d81b4009ed094dd24a654a5d85c2a00
-MD5Sum: 5c6b2bd32983b69955516d192b533dbb
+Size: 5825024
+SHA256sum: 8cd37b5be8e87f9ba2ef5e0b06410fc698a743d909e91568bca8d0236950452f
+MD5Sum: ba4396609a5dab2cc82479668cd17296
 
 Package: tailscale
 Version: 1.98.8-2
@@ -47,8 +47,8 @@ Section: net
 Architecture: mips_24kc
 Installed-Size: 26214641
 Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
-Description: Tailscale VPN daemon+CLI (mips softfloat, current 1.98.8). Binary only;
+Description: Tailscale (tailscale) for mips_24kc, current 1.98.8 softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale.
 Filename: tailscale_1.98.8-2_mips_24kc.ipk
-Size: 8549260
-SHA256sum: 9463c5c48f4bb29bdb6d6ab7bf42619974f35c245c607fc508b244f568e1e289
-MD5Sum: 807fce749929b341215dbcd3ef040889
+Size: 8549238
+SHA256sum: 1d0694d0a27c0f61972d341ab6e7da363ef8986257d3d8d64ecda902c688b129
+MD5Sum: 259c4f901e442309662f232005c1f5fd

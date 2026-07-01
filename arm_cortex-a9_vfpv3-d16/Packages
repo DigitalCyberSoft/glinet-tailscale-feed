@@ -1,0 +1,39 @@
+Package: gl-sdk4-tailscale
+Version: git-2025.115.15781-4b8df63-1
+Depends: libc, coreutils, coreutils-timeout, tailscale, libuci-lua
+Source: feeds/glinet/gl-sdk4-tailscale
+Section: base
+Architecture: all
+Installed-Size: 6328
+Description: TAILSCALE Info API for Gl.inet
+Filename: gl-sdk4-tailscale_git-2025.115.15781-4b8df63-1_all.ipk
+Size: 7152
+SHA256sum: 621898ac71b89fefcf949a1aaf249fb60908ba578ef7868936ad632e85f6810d
+MD5Sum: 19594f17fc093940227054d63ed2b633
+
+Package: gl-sdk4-ui-tailscaleview
+Version: git-2025.244.27716-e9a0fdd-1
+Depends: libc, gl-sdk4-tailscale, gl-sdk4-ui-core
+Source: feeds/glinet/gl-ui4.0/module/tailscaleview
+Section: base
+Architecture: all
+Installed-Size: 16446
+Description: gl-sdk4-ui-tailscaleview
+Filename: gl-sdk4-ui-tailscaleview_git-2025.244.27716-e9a0fdd-1_all.ipk
+Size: 17672
+SHA256sum: 8114fa8576208b2bf4c5945962f1a3ce2128ab4eab30a29d2fafbcf4fa1b69f1
+MD5Sum: 7cb3cb5d3827496cf5f1c521b3084062
+
+Package: tailscale
+Version: 1.98.8-2
+Depends: libc, ca-bundle, kmod-tun
+Provides: tailscaled
+Section: net
+Architecture: arm_cortex-a9_vfpv3-d16
+Installed-Size: 22741202
+Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
+Description: Tailscale (tailscale) for arm_cortex-a9_vfpv3-d16, current 1.98.8 softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale.
+Filename: tailscale_1.98.8-2_arm_cortex-a9_vfpv3-d16.ipk
+Size: 8788626
+SHA256sum: 8777d45440edf44955efbcd89d4271916a12924f293d63dc4aaadf117c71a6b6
+MD5Sum: bd1f65096f17e9c72460e2f762b3431e
