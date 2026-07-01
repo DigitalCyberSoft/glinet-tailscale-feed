@@ -1,5 +1,7 @@
 # glinet-tailscale-feed
 
+**Full install + device→arch guide: [INSTALL.md](INSTALL.md)**
+
 Self-hosted opkg feed that restores **Tailscale + the GL.iNet admin-UI Tailscale panel** on
 GL.iNet **GL-E750 / GL-E750V2 (Mudi / Mudi V2)** and other `ath79 / mips_24kc` (QCA95xx) routers,
 after GL.iNet stopped shipping it.
