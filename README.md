@@ -28,3 +28,17 @@ opkg install -d sd tailscale    # 'sd' = a dest defined in /etc/opkg.conf pointi
 ## Known deviations from GL's build
 - Stock Tailscale firewall mark (`0x80000`) / route table (52). GL's e750v2 build remaps these (`0x800000` / 55) to avoid colliding with GL's firewall when the GL GUI backend drives it. This feed ships the daemon for **CLI** management.
 - The GL admin-UI Tailscale panel (`gl-sdk4-tailscale`, `gl-sdk4-ui-tailscaleview`) is **not** included — GL's closed packages, shipped only inside firmware images.
+
+## Packages
+
+| Package | Version | Download | Installed | Notes |
+|---|---|---|---|---|
+| `tailscale` | 1.98.8-1 | ~8.5MB | ~26MB | Full router build (netstack + DNS). Recommended. |
+| `tailscale-micro` | 1.98.8-micro1 | ~5.6MB | ~17MB | Size-minimized: **no netstack, no DNS/MagicDNS management**. Kernel-TUN subnet-router / exit-node CLI use. Conflicts with `tailscale`. |
+
+Both are current 1.98.8 (soft-float mips). Pick one:
+```sh
+opkg install --nocheck-signature tailscale         # full
+opkg install --nocheck-signature tailscale-micro   # minimal
+```
+`tailscale-micro` is current source with aggressive feature-omit tags, chosen over shipping an old (smaller-but-vulnerable) binary.

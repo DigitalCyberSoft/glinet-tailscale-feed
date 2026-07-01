@@ -1,3 +1,18 @@
+Package: tailscale-micro
+Version: 1.98.8-micro1
+Depends: libc, ca-bundle, kmod-tun
+Provides: tailscale, tailscaled
+Conflicts: tailscale
+Section: net
+Architecture: mips_24kc
+Installed-Size: 17303035
+Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
+Description: Tailscale VPN, size-minimized build (current 1.98.8-micro1, ~17MB vs ~26MB).
+Filename: tailscale-micro_1.98.8-micro1_mips_24kc.ipk
+Size: 5826994
+SHA256sum: 6f0403d480811051cafa129a7d0b1dcb1ec6c9e43dbd70a02689b5da2dac0e3a
+MD5Sum: b448292a915423a1651b4cd81c8c236f
+
 Package: tailscale
 Version: 1.98.8-1
 Depends: libc, ca-bundle, kmod-tun
