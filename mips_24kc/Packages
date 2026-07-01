@@ -1,0 +1,14 @@
+Package: tailscale
+Version: 1.98.8-1
+Depends: libc, ca-bundle, kmod-tun
+Provides: tailscaled
+Source: gl-inet/gl-feeds (small-tailscale approach), upstream tailscale 1.98.8-1
+Section: net
+Architecture: mips_24kc
+Installed-Size: 26215931
+Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
+Description: Tailscale zero-config VPN (combined tailscaled+CLI, mips softfloat, -s -w).
+Filename: tailscale_1.98.8-1_mips_24kc.ipk
+Size: 8548744
+SHA256sum: ea75b6bb3d27ea9d1502124e249bbd5006198199353ec4d38decc21c8d4079f1
+MD5Sum: eb43255b536636782c8221a06d84243e
