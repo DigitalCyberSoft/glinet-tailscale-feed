@@ -2,6 +2,17 @@
 
 Base URL: `https://digitalcybersoft.github.io/glinet-tailscale-feed`
 
+## Quick start (scripted)
+
+The installer auto-detects your arch, checks free flash, and picks full vs `-micro`:
+```sh
+curl -fsSL https://digitalcybersoft.github.io/glinet-tailscale-feed/setup.sh -o /tmp/setup.sh
+sh /tmp/setup.sh --dry-run     # inspect only — changes NOTHING on the device
+sh /tmp/setup.sh               # do it
+```
+Flags: `--dry-run`/`-n` (inspect only), `--micro` (force small build), `--full` (force full build).
+Prefer to do it by hand? Follow the steps below.
+
 ## Step 1 — find your architecture
 
 On the router (SSH in):
@@ -26,25 +37,29 @@ echo "src/gz glits https://digitalcybersoft.github.io/glinet-tailscale-feed/$ARC
 ```
 `/etc/opkg/customfeeds.conf` is for your own feeds; `/etc/opkg/distfeeds.conf` is GL's (leave it alone).
 
-## Step 3 — signatures
+## Step 3 — signatures (why `--force-signature` is needed)
 
-This feed is **unsigned**. opkg verifies signatures globally, so either install with the
-override flag each time:
+This feed is **unsigned**. GL firmware ships opkg with `check_signature` on. Verified against
+opkg-lede source (`libopkg/opkg_cmd.c`), that means a **plain** `opkg update` downloads this
+feed's package list, fails to fetch the (nonexistent) `Packages.sig`, and then **deletes the list**.
+So you must pass `--force-signature`, which keeps the unsigned list and allows install from it:
 ```sh
-opkg update
-opkg install --nocheck-signature tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview
+opkg update  --force-signature
+opkg install --force-signature tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview
 ```
-…or disable the global check once by editing `/etc/opkg.conf` and commenting the line:
-```
-# option check_signature 1
-```
-Your device keeps verifying GL's own signed feeds regardless (those live in distfeeds.conf).
+Notes:
+- `--nocheck-signature` does **not** exist in OpenWrt/GL opkg (only `--force-signature`). The old
+  guidance to comment out `option check_signature` in `/etc/opkg.conf` is **not** recommended: it
+  would also disable verification of GL's own signed feeds. `--force-signature` is scoped per command.
+- The installer drops a helper, **`glits-update`** (= `opkg update --force-signature`). Use it
+  instead of plain `opkg update` when you want to refresh and keep this feed.
+- Already-installed packages keep working after a plain `opkg update`; only the update list is pruned.
 
 ## Step 4 — install
 
 ```sh
-opkg update
-opkg install tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview
+opkg update  --force-signature
+opkg install --force-signature tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview
 ```
 - `tailscale` — the daemon+CLI (one binary).
 - `gl-sdk4-tailscale` — GL backend (service init, rpcd handler, firewall/routing glue).

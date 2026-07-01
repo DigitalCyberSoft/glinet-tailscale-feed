@@ -22,12 +22,16 @@ for GL routers (GL-E750/E750V2 Mudi and more) after GL.iNet dropped it. Seven ar
 &middot; <a href="https://github.com/DigitalCyberSoft/glinet-tailscale-feed">Source on GitHub</a></p>
 
 <h2>Install</h2>
-<pre>ARCH=$(opkg print-architecture | awk 'END{print $2}')   # or set manually from the table
-echo "src/gz glits https://digitalcybersoft.github.io/glinet-tailscale-feed/$ARCH" &gt;&gt; /etc/opkg/customfeeds.conf
-opkg update
-opkg install --nocheck-signature tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview</pre>
-<p class="note">Unsigned feed: use <code>--nocheck-signature</code> or comment out <code>option check_signature</code>
-in <code>/etc/opkg.conf</code>. Panel appears under <b>Applications → Tailscale</b>. Full steps in the install guide.</p>
+<pre>curl -fsSL https://digitalcybersoft.github.io/glinet-tailscale-feed/setup.sh -o /tmp/setup.sh
+sh /tmp/setup.sh --dry-run     # inspect only, changes nothing
+sh /tmp/setup.sh               # detects arch + free space, installs full or -micro</pre>
+<p class="note">Manual install and the device&rarr;arch map are in the
+<a href="INSTALL.md">install guide</a>.</p>
+<p class="note">This feed is <b>unsigned</b> and GL opkg has <code>check_signature</code> on, so use
+<code>--force-signature</code> on <code>opkg update</code> <i>and</i> <code>opkg install</code>
+(<code>--nocheck-signature</code> does not exist in GL opkg). A plain <code>opkg update</code> deletes an
+unsigned feed's list; the installer adds a <code>glits-update</code> helper that wraps the flag.
+Panel appears under <b>Applications &rarr; Tailscale</b>.</p>
 
 <h2>Architecture feeds</h2>
 <table>

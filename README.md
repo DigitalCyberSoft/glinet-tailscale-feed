@@ -6,7 +6,7 @@ Self-hosted opkg feed that restores **Tailscale + the GL.iNet admin-UI Tailscale
 GL.iNet **GL-E750 / GL-E750V2 (Mudi / Mudi V2)** and other `ath79 / mips_24kc` (QCA95xx) routers,
 after GL.iNet stopped shipping it.
 
-Architecture: **mips_24kc** only (GL-E750/E750V2 = QCA9533 / ath79). NOT for aarch64 (XE3000).
+Built for **seven** GL architectures (see the table below); GL-E750/E750V2 = QCA9533 / ath79 / `mips_24kc`.
 
 ## Packages
 
@@ -41,15 +41,34 @@ Every arch feed ships the same GL GUI panel (`gl-sdk4-*`, `Architecture: all`). 
 
 ## Install (any device)
 
+Easiest — the script auto-detects arch, checks free space, and picks full vs `-micro`:
+
 ```sh
-ARCH=$(opkg print-architecture | awk '/tailscale|cortex|mips/{print $2}' | tail -1)   # or set manually
-echo "src/gz glits https://digitalcybersoft.github.io/glinet-tailscale-feed/$ARCH" >> /etc/opkg/customfeeds.conf
-opkg update
-opkg install --nocheck-signature tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview
+curl -fsSL https://digitalcybersoft.github.io/glinet-tailscale-feed/setup.sh -o /tmp/setup.sh
+sh /tmp/setup.sh --dry-run     # inspect only, changes nothing
+sh /tmp/setup.sh               # install
 ```
+
+Manual equivalent:
+
+```sh
+ARCH=$(opkg print-architecture | awk '$1=="arch" && $2!="all" && $2!="noarch"{print $3, $2}' | sort -rn | awk 'NR==1{print $2}')
+echo "src/gz glits https://digitalcybersoft.github.io/glinet-tailscale-feed/$ARCH" >> /etc/opkg/customfeeds.conf
+opkg update  --force-signature
+opkg install --force-signature tailscale gl-sdk4-tailscale gl-sdk4-ui-tailscaleview
+```
+
 Panel appears under **Applications -> Tailscale** in the GL admin UI (postinst reloads rpcd/nginx;
-refresh or reboot if needed). If opkg rejects the unsigned feed, comment out `option check_signature`
-in `/etc/opkg.conf`. If it rejects the arch, add `--force-architecture`.
+refresh or reboot if needed). If opkg rejects the arch, add `--force-architecture`.
+
+### The `--force-signature` flag is required (unsigned feed)
+GL firmware ships opkg with `check_signature` enabled. This feed is **unsigned**, so:
+- `opkg update` **without** `--force-signature` downloads then **deletes** this feed's package
+  list (it has no `Packages.sig`). Always update with `opkg update --force-signature`.
+- The installer drops a helper: run **`glits-update`** instead of plain `opkg update` to refresh
+  and keep this feed, then `opkg install --force-signature tailscale` to pull a newer build.
+- Already-installed packages keep working after a plain `opkg update`; only the update list is pruned.
+- `--nocheck-signature` does **not** exist in OpenWrt/GL opkg — use `--force-signature`.
 
 
 ### Low flash (GL-E750 ~16MB internal)
