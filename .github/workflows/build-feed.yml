@@ -1,0 +1,111 @@
+name: build-feed
+
+# Fully automated: rebuild tailscale for every GL arch when a new stable is
+# released, store each version as a GitHub Release, and publish the opkg feed
+# (newest 7 versions) to GitHub Pages. No manual steps.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'        # daily
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'tailscale version (blank = latest stable)'
+        required: false
+      force:
+        description: 'rebuild even if the release already exists'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write     # create releases
+  pages: write        # deploy pages
+  id-token: write     # deploy-pages OIDC
+
+concurrency:
+  group: build-feed
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      need: ${{ steps.v.outputs.need }}
+    steps:
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IN_VER: ${{ github.event.inputs.version }}
+          IN_FORCE: ${{ github.event.inputs.force }}
+        run: |
+          set -euo pipefail
+          if [ -n "${IN_VER:-}" ]; then
+            VER="$IN_VER"
+          else
+            # latest stable tailscale tag: stable = even minor version.
+            VER=$(git ls-remote --tags --refs https://github.com/tailscale/tailscale.git \
+                  | sed -n 's#.*refs/tags/v##p' \
+                  | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+                  | awk -F. '($2 % 2) == 0' \
+                  | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          fi
+          [ -n "$VER" ] || { echo "could not resolve version"; exit 1; }
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if [ "${IN_FORCE:-false}" = "true" ]; then
+            echo "need=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "ts-$VER" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "need=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "need=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "resolved tailscale $VER (build needed: $(tail -1 $GITHUB_OUTPUT))"
+
+  build:
+    needs: resolve
+    if: needs.resolve.outputs.need == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout tailscale ${{ needs.resolve.outputs.version }}
+        run: git clone --depth 1 --branch "v${{ needs.resolve.outputs.version }}" https://github.com/tailscale/tailscale.git ts
+      - name: Build + package all arches (gzip-tar ipks)
+        env:
+          TS_SRC: ${{ github.workspace }}/ts
+          TS_VER: ${{ needs.resolve.outputs.version }}
+          OUT: ${{ github.workspace }}/dist
+        run: bash tools/build_release.sh
+      - name: Publish/refresh release with ipks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ needs.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          mapfile -t ipks < <(find dist -name '*.ipk' | sort)
+          if gh release view "ts-$VER" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "ts-$VER" -R "$GITHUB_REPOSITORY" --clobber "${ipks[@]}"
+          else
+            gh release create "ts-$VER" -R "$GITHUB_REPOSITORY" \
+              -t "tailscale $VER" -n "Auto-built tailscale $VER ipks (gzip-tar, all GL arches)." \
+              "${ipks[@]}"
+          fi
+
+  publish:
+    needs: [resolve, build]
+    # run after a build, or on a schedule tick where build was skipped (re-assemble)
+    if: always() && needs.resolve.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble feed site (newest 7 releases + GUI + static)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/assemble_site.sh _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
