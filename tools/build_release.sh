@@ -14,7 +14,7 @@ set -euo pipefail
 
 TS_SRC="${TS_SRC:?set TS_SRC to a tailscale checkout}"
 TS_VER="${TS_VER:?set TS_VER e.g. 1.98.8}"
-PKG_REV="${PKG_REV:-1}"
+PKG_REV="${PKG_REV:-2}"
 OUT="${OUT:?set OUT}"
 TOOLS="$(cd "$(dirname "$0")" && pwd)"
 
@@ -23,7 +23,6 @@ mkdir -p "$OUT/bin"
 
 # --- compile: one binary per instruction set --------------------------------
 # build_dist.sh --box => ts_include_cli (combined tailscaled+CLI, argv0 dispatch)
-#                --extra-small => minimized feature set (the "micro" build)
 build() { # $1=label $2=goarch $3="ENV=VAL ..." $4=extra_flags
   local label="$1" goarch="$2" goenv="$3" flags="$4"
   echo ">>> build $label ($goarch $goenv $flags)"
@@ -32,11 +31,25 @@ build() { # $1=label $2=goarch $3="ENV=VAL ..." $4=extra_flags
       ./build_dist.sh $flags --box -o "$OUT/bin/tailscaled-$label" ./cmd/tailscaled )
 }
 
+# micro feature set: like --extra-small (--min --add=osrouter) but ALSO keep
+# `unixsocketidentity`. That feature reads the unix-socket peer credentials so
+# tailscaled recognizes the local root caller and grants LocalAPI PermitRead/Write.
+# Plain --extra-small drops it, so tailscaled returns "status/prefs access denied"
+# to both the CLI and the GL panel (verified on a GL-E750). ts_include_cli keeps
+# the combined CLI. Computed once from the same tailscale tree.
+MICRO_FT="$(cd "$TS_SRC" && GOOS= GOARCH= ./tool/go run ./cmd/featuretags --min --add=osrouter,unixsocketidentity)"
+build_micro() { # $1=label $2=goarch $3="ENV=VAL ..."
+  echo ">>> build $1 micro ($2, tags: ts_include_cli,$MICRO_FT)"
+  ( cd "$TS_SRC"
+    env CGO_ENABLED=0 GOOS=linux GOARCH="$2" $3 TAGS="ts_include_cli,$MICRO_FT" \
+      ./build_dist.sh -o "$OUT/bin/tailscaled-$1" ./cmd/tailscaled )
+}
+
 build mips   mips   "GOMIPS=softfloat" ""
 build mipsle mipsle "GOMIPS=softfloat" ""
 build arm    arm    "GOARM=7"          ""
 build arm64  arm64  ""                 ""
-build micro-mips mips "GOMIPS=softfloat" "--extra-small"
+build_micro micro-mips mips "GOMIPS=softfloat"
 
 # --- package: stage installed layout then build the ipk ---------------------
 pack() { # $1=archdir $2=binary_path $3=pkgname(tailscale|tailscale-micro)

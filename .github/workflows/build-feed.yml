@@ -82,13 +82,14 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t ipks < <(find dist -name '*.ipk' | sort)
+          # Replace the release wholesale so a rebuild never leaves stale-rev assets
+          # (e.g. a superseded -micro1) alongside the current build. Keeps the tag.
           if gh release view "ts-$VER" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "ts-$VER" -R "$GITHUB_REPOSITORY" --clobber "${ipks[@]}"
-          else
-            gh release create "ts-$VER" -R "$GITHUB_REPOSITORY" \
-              -t "tailscale $VER" -n "Auto-built tailscale $VER ipks (gzip-tar, all GL arches)." \
-              "${ipks[@]}"
+            gh release delete "ts-$VER" -R "$GITHUB_REPOSITORY" --yes
           fi
+          gh release create "ts-$VER" -R "$GITHUB_REPOSITORY" \
+            -t "tailscale $VER" -n "Auto-built tailscale $VER ipks (gzip-tar, all GL arches)." \
+            "${ipks[@]}"
 
   publish:
     needs: [resolve, build]
