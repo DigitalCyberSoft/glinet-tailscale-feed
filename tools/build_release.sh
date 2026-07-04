@@ -31,13 +31,19 @@ build() { # $1=label $2=goarch $3="ENV=VAL ..." $4=extra_flags
       ./build_dist.sh $flags --box -o "$OUT/bin/tailscaled-$label" ./cmd/tailscaled )
 }
 
-# micro feature set: like --extra-small (--min --add=osrouter) but ALSO keep
-# `unixsocketidentity`. That feature reads the unix-socket peer credentials so
-# tailscaled recognizes the local root caller and grants LocalAPI PermitRead/Write.
-# Plain --extra-small drops it, so tailscaled returns "status/prefs access denied"
-# to both the CLI and the GL panel (verified on a GL-E750). ts_include_cli keeps
-# the combined CLI. Computed once from the same tailscale tree.
-MICRO_FT="$(cd "$TS_SRC" && GOOS= GOARCH= ./tool/go run ./cmd/featuretags --min --add=osrouter,unixsocketidentity)"
+# micro feature set: --min (drop everything, incl. RAM-heavy netstack) then add
+# back exactly what the GL panel + CLI need. featuretags resolves each entry's
+# Requires(), so deps come along. Learned on a GL-E750, each verified:
+#   unixsocketidentity - unix-socket peer auth; without it LocalAPI returns
+#                        "status/prefs access denied" to the CLI and the panel.
+#   ipnbus             - the IPN bus `tailscale up` watches for login; without it
+#                        up prints "not waiting for completion", no AuthURL appears,
+#                        and the panel's login link times out.
+#   osrouter,useroutes,advertiseroutes,useexitnode,advertiseexitnode,dns,syspolicy
+#                      - subnet-router / exit-node / DNS the panel configures.
+# ts_include_cli keeps the combined CLI. netstack stays omitted (kernel TUN routes).
+MICRO_ADD="osrouter,unixsocketidentity,ipnbus,useroutes,advertiseroutes,useexitnode,advertiseexitnode,dns,syspolicy"
+MICRO_FT="$(cd "$TS_SRC" && GOOS= GOARCH= ./tool/go run ./cmd/featuretags --min --add="$MICRO_ADD")"
 build_micro() { # $1=label $2=goarch $3="ENV=VAL ..."
   echo ">>> build $1 micro ($2, tags: ts_include_cli,$MICRO_FT)"
   ( cd "$TS_SRC"
