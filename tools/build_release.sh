@@ -14,7 +14,7 @@ set -euo pipefail
 
 TS_SRC="${TS_SRC:?set TS_SRC to a tailscale checkout}"
 TS_VER="${TS_VER:?set TS_VER e.g. 1.98.8}"
-PKG_REV="${PKG_REV:-2}"
+PKG_REV="${PKG_REV:-1}"
 OUT="${OUT:?set OUT}"
 TOOLS="$(cd "$(dirname "$0")" && pwd)"
 
@@ -63,7 +63,7 @@ pack() { # $1=archdir $2=binary_path $3=pkgname(tailscale|tailscale-micro)
     ver="${TS_VER}-${PKG_REV}"; prov="tailscaled"; conf=""
     desc="Tailscale (tailscale) for ${archdir}, current ${TS_VER} softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale."
   else
-    ver="${TS_VER}-micro${PKG_REV}"; prov="tailscale, tailscaled"; conf="tailscale"
+    ver="${TS_VER}-micro"; prov="tailscale, tailscaled"; conf="tailscale"
     desc="Tailscale (tailscale-micro) for ${archdir}, current ${TS_VER}, size-minimized. Binary only; GUI via gl-sdk4-tailscale."
   fi
   mkdir -p "$OUT/$archdir"
