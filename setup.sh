@@ -31,6 +31,10 @@ FULL_INSTALL_KB=26000     # full binary worst case + GUI
 MICRO_INSTALL_KB=17000    # micro binary + GUI
 HEADROOM_KB=2048          # opkg control files + flash slack (.ipk downloads to RAM /tmp)
 COMFORT_KB=4096           # free-space cushion above the bare requirement before we call it "tight"
+# RAM, not flash, is the binding constraint at runtime: full tailscale links netstack
+# (gVisor userspace TCP/IP) and its RSS can OOM a small router. On a router netstack
+# isn't needed (kernel TUN does subnet routing), so -micro is the correct build there.
+LOWRAM_KB=262144          # <=256 MB RAM -> prefer -micro (verified: full OOM'd a 128 MB e750)
 
 NEED_FULL=$((FULL_INSTALL_KB + HEADROOM_KB))
 NEED_MICRO=$((MICRO_INSTALL_KB + HEADROOM_KB))
@@ -94,6 +98,20 @@ done
 log "  writable overlay ($MP): ${AVAIL} KB free (~$((AVAIL/1024)) MB)"
 log "  full stack needs ~$((NEED_FULL/1024)) MB; micro needs ~$((NEED_MICRO/1024)) MB (installed)."
 
+# ---- RAM: the binding runtime constraint (full links netstack; can OOM) ----------
+head_ "Memory"
+MEM_KB=$(awk '/^MemTotal:/{print $2; exit}' /proc/meminfo 2>/dev/null)
+[ -n "${MEM_KB:-}" ] && [ "$MEM_KB" -gt 0 ] 2>/dev/null || MEM_KB=0
+LOWRAM=0
+if [ "$MEM_KB" -gt 0 ] && [ "$MEM_KB" -le "$LOWRAM_KB" ]; then LOWRAM=1; fi
+if [ "$MEM_KB" -eq 0 ]; then
+	log "  RAM: could not read /proc/meminfo; not forcing micro on RAM grounds."
+elif [ "$LOWRAM" = 1 ]; then
+	log "  RAM: ~$((MEM_KB/1024)) MB  [low-RAM: full+netstack can OOM -> -micro preferred]"
+else
+	log "  RAM: ~$((MEM_KB/1024)) MB  [enough for full]"
+fi
+
 # ---- external storage (only relevant if nothing fits) ---------------------------
 ext_report() {
 	df -k 2>/dev/null | awk '
@@ -105,12 +123,24 @@ ext_report() {
 # ---- choose tier ----------------------------------------------------------------
 head_ "Plan"
 TIGHT=0
+LOWRAM_NOMICRO=0
 if [ -n "$FORCE_TIER" ]; then
 	TIER="$FORCE_TIER"
 	if [ "$TIER" = micro ] && [ "$MICRO_OK" != 1 ]; then
 		die "no -micro build exists for $ARCH; only mips_24kc has one. Re-run without --micro."
 	fi
+	if [ "$TIER" = full ] && [ "$LOWRAM" = 1 ]; then
+		log "  WARNING: forcing full on a low-RAM device (~$((MEM_KB/1024)) MB); full links netstack and may OOM. -micro is safer."
+	fi
 	log "  tier forced by argument: $TIER"
+elif [ "$LOWRAM" = 1 ] && [ "$MICRO_OK" = 1 ] && [ "$AVAIL" -ge "$NEED_MICRO" ]; then
+	# RAM gates first: on a small router, full+netstack risks OOM regardless of flash.
+	TIER=micro
+	log "  low RAM (~$((MEM_KB/1024)) MB) -> micro (full links netstack; would risk OOM)"
+elif [ "$LOWRAM" = 1 ] && [ "$MICRO_OK" != 1 ] && [ "$AVAIL" -ge "$NEED_FULL" ]; then
+	# low RAM but no micro built for this arch: full is the only option; warn loudly.
+	TIER=full; LOWRAM_NOMICRO=1
+	log "  low RAM (~$((MEM_KB/1024)) MB) but no -micro build for $ARCH -> full (RISKS OOM under load)"
 elif [ "$AVAIL" -ge $((NEED_FULL + COMFORT_KB)) ]; then
 	TIER=full
 	log "  ample space -> full build"
@@ -157,6 +187,13 @@ if [ -z "$FORCE_TIER" ] && [ "$TIER" = full ] && [ "$TIGHT" = 1 ] && [ "$MICRO_O
 		TIER=micro
 		log "  -> switching to micro"
 	fi
+fi
+
+if [ "$LOWRAM_NOMICRO" = 1 ]; then
+	log ""
+	log "  !! This device has ~$((MEM_KB/1024)) MB RAM and no -micro build exists for $ARCH."
+	log "  !! Full tailscale links netstack and may OOM under load. If it crashes, either"
+	log "  !! ask for a -micro build for $ARCH, or run tailscaled with --tun and no netstack."
 fi
 
 # ---- assemble the commands ------------------------------------------------------
