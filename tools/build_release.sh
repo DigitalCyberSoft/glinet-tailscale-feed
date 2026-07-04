@@ -28,7 +28,7 @@ build() { # $1=label $2=goarch $3="ENV=VAL ..." $4=extra_flags
   echo ">>> build $label ($goarch $goenv $flags)"
   ( cd "$TS_SRC"
     env CGO_ENABLED=0 GOOS=linux GOARCH="$goarch" $goenv \
-      ./build_dist.sh $flags --box -o "$OUT/bin/tailscaled-$label" ./cmd/tailscaled )
+      ./build_dist.sh $flags --box --strip -o "$OUT/bin/tailscaled-$label" ./cmd/tailscaled )
 }
 
 # micro feature set: --min (drop everything, incl. RAM-heavy netstack) then add
@@ -48,7 +48,7 @@ build_micro() { # $1=label $2=goarch $3="ENV=VAL ..."
   echo ">>> build $1 micro ($2, tags: ts_include_cli,$MICRO_FT)"
   ( cd "$TS_SRC"
     env CGO_ENABLED=0 GOOS=linux GOARCH="$2" $3 TAGS="ts_include_cli,$MICRO_FT" \
-      ./build_dist.sh -o "$OUT/bin/tailscaled-$1" ./cmd/tailscaled )
+      ./build_dist.sh --strip -o "$OUT/bin/tailscaled-$1" ./cmd/tailscaled )
 }
 
 build mips   mips   "GOMIPS=softfloat" ""
