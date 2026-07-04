@@ -39,10 +39,10 @@ build() { # $1=label $2=goarch $3="ENV=VAL ..." $4=extra_flags
 #   ipnbus             - the IPN bus `tailscale up` watches for login; without it
 #                        up prints "not waiting for completion", no AuthURL appears,
 #                        and the panel's login link times out.
-#   osrouter,useroutes,advertiseroutes,useexitnode,advertiseexitnode,dns,syspolicy
+#   osrouter,useroutes,advertiseroutes,useexitnode,advertiseexitnode,dns
 #                      - subnet-router / exit-node / DNS the panel configures.
 # ts_include_cli keeps the combined CLI. netstack stays omitted (kernel TUN routes).
-MICRO_ADD="osrouter,unixsocketidentity,ipnbus,useroutes,advertiseroutes,useexitnode,advertiseexitnode,dns,syspolicy"
+MICRO_ADD="osrouter,unixsocketidentity,ipnbus,useroutes,advertiseroutes,useexitnode,advertiseexitnode,dns"
 MICRO_FT="$(cd "$TS_SRC" && GOOS= GOARCH= ./tool/go run ./cmd/featuretags --min --add="$MICRO_ADD")"
 build_micro() { # $1=label $2=goarch $3="ENV=VAL ..."
   echo ">>> build $1 micro ($2, tags: ts_include_cli,$MICRO_FT)"
