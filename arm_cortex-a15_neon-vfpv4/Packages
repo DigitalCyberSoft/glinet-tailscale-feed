@@ -6,10 +6,12 @@ Section: base
 Architecture: all
 Installed-Size: 6328
 Description: TAILSCALE Info API for Gl.inet
+SourceName: gl-sdk4-tailscale
+SourceDateEpoch: 1745554981
 Filename: gl-sdk4-tailscale_git-2025.115.15781-4b8df63-1_all.ipk
-Size: 7152
-SHA256sum: 621898ac71b89fefcf949a1aaf249fb60908ba578ef7868936ad632e85f6810d
-MD5Sum: 19594f17fc093940227054d63ed2b633
+Size: 7222
+SHA256sum: 18b212f187f75690a766bf280baca521f86425be9c5a087636083b7661f8ffdb
+MD5Sum: 844623aee1786d6f98cbe28589256889
 
 Package: gl-sdk4-ui-tailscaleview
 Version: git-2025.244.27716-e9a0fdd-1
@@ -19,21 +21,23 @@ Section: base
 Architecture: all
 Installed-Size: 16446
 Description: gl-sdk4-ui-tailscaleview
+SourceName: gl-sdk4-ui-tailscaleview
+SourceDateEpoch: 1756712516
 Filename: gl-sdk4-ui-tailscaleview_git-2025.244.27716-e9a0fdd-1_all.ipk
-Size: 17672
-SHA256sum: 8114fa8576208b2bf4c5945962f1a3ce2128ab4eab30a29d2fafbcf4fa1b69f1
-MD5Sum: 7cb3cb5d3827496cf5f1c521b3084062
+Size: 17728
+SHA256sum: 84d97ac19c8fe61b395c09bd084d2df2736be3aa03fbbbcd57eb7ec36bd7861e
+MD5Sum: 5f6d7121c982e4ab4a8fc4603258208b
 
 Package: tailscale
 Version: 1.98.8-2
 Depends: libc, ca-bundle, kmod-tun
-Provides: tailscaled
 Section: net
 Architecture: arm_cortex-a15_neon-vfpv4
 Installed-Size: 22741202
+Provides: tailscaled
 Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
 Description: Tailscale (tailscale) for arm_cortex-a15_neon-vfpv4, current 1.98.8 softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale.
 Filename: tailscale_1.98.8-2_arm_cortex-a15_neon-vfpv4.ipk
-Size: 8788858
-SHA256sum: 21a588bca4064f8d4e1a5075b924880f5aae037ecbdff4fdae41f44686fcfe9b
-MD5Sum: 1a9801bb1e0717fdda77a2b3f27c85c5
+Size: 8779186
+SHA256sum: 9b01c9c2a06a49abcad734b0800fd47e2f95007e5930a74aadd8ec991c1aa738
+MD5Sum: a1f1cee6517f85a22fc632e901660589

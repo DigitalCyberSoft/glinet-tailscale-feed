@@ -6,10 +6,12 @@ Section: base
 Architecture: all
 Installed-Size: 6328
 Description: TAILSCALE Info API for Gl.inet
+SourceName: gl-sdk4-tailscale
+SourceDateEpoch: 1745554981
 Filename: gl-sdk4-tailscale_git-2025.115.15781-4b8df63-1_all.ipk
-Size: 7152
-SHA256sum: 621898ac71b89fefcf949a1aaf249fb60908ba578ef7868936ad632e85f6810d
-MD5Sum: 19594f17fc093940227054d63ed2b633
+Size: 7222
+SHA256sum: 9b6060e093b1a9c5f7f2a87ebe75ae533e25453eec5ea205c730b1b69eee834f
+MD5Sum: 7b3b44af5e6e0899f55b9aa533e6186a
 
 Package: gl-sdk4-ui-tailscaleview
 Version: git-2025.244.27716-e9a0fdd-1
@@ -19,36 +21,38 @@ Section: base
 Architecture: all
 Installed-Size: 16446
 Description: gl-sdk4-ui-tailscaleview
+SourceName: gl-sdk4-ui-tailscaleview
+SourceDateEpoch: 1756712516
 Filename: gl-sdk4-ui-tailscaleview_git-2025.244.27716-e9a0fdd-1_all.ipk
-Size: 17672
-SHA256sum: 8114fa8576208b2bf4c5945962f1a3ce2128ab4eab30a29d2fafbcf4fa1b69f1
-MD5Sum: 7cb3cb5d3827496cf5f1c521b3084062
+Size: 17728
+SHA256sum: 77037ba5649410744d2138ef5ac32e2f14732fd17da30bca498c22202f511105
+MD5Sum: 8ddc8662d763573196b95f36950664bc
 
 Package: tailscale-micro
 Version: 1.98.8-micro2
 Depends: libc, ca-bundle, kmod-tun
-Provides: tailscale, tailscaled
-Conflicts: tailscale
 Section: net
 Architecture: mips_24kc
 Installed-Size: 17301745
+Provides: tailscale, tailscaled
+Conflicts: tailscale
 Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
 Description: Tailscale (tailscale-micro) for mips_24kc, current 1.98.8 softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale.
 Filename: tailscale-micro_1.98.8-micro2_mips_24kc.ipk
-Size: 5825024
-SHA256sum: 8cd37b5be8e87f9ba2ef5e0b06410fc698a743d909e91568bca8d0236950452f
-MD5Sum: ba4396609a5dab2cc82479668cd17296
+Size: 5814304
+SHA256sum: d9d4dfa36a11c1ba541115cd4e4613ccba7caabb910c1c9121b759b40e6dce9a
+MD5Sum: dddac8f1958d4b74c84c2c76350f55d6
 
 Package: tailscale
 Version: 1.98.8-2
 Depends: libc, ca-bundle, kmod-tun
-Provides: tailscaled
 Section: net
 Architecture: mips_24kc
 Installed-Size: 26214641
+Provides: tailscaled
 Maintainer: DigitalCyberSoft <noreply@users.noreply.github.com>
 Description: Tailscale (tailscale) for mips_24kc, current 1.98.8 softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale.
 Filename: tailscale_1.98.8-2_mips_24kc.ipk
-Size: 8549238
-SHA256sum: 1d0694d0a27c0f61972d341ab6e7da363ef8986257d3d8d64ecda902c688b129
-MD5Sum: 259c4f901e442309662f232005c1f5fd
+Size: 8533463
+SHA256sum: 45c365ecdb2e344f4ab8460dacf645cd6f7270d1ce56f3d3ad1c00e20f86d6f4
+MD5Sum: 808eafc4cc1a1e6d716cbedb5973def5
