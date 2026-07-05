@@ -55,7 +55,10 @@ build mips   mips   "GOMIPS=softfloat" ""
 build mipsle mipsle "GOMIPS=softfloat" ""
 build arm    arm    "GOARM=7"          ""
 build arm64  arm64  ""                 ""
-build_micro micro-mips mips "GOMIPS=softfloat"
+build_micro micro-mips   mips   "GOMIPS=softfloat"
+build_micro micro-mipsle mipsle "GOMIPS=softfloat"
+build_micro micro-arm    arm    "GOARM=7"
+build_micro micro-arm64  arm64  ""
 
 # --- package: stage installed layout then build the ipk ---------------------
 pack() { # $1=archdir $2=binary_path $3=pkgname(tailscale|tailscale-micro)
@@ -87,8 +90,18 @@ pack arm_cortex-a7_neon-vfpv4  "$OUT/bin/tailscaled-arm"    tailscale
 pack arm_cortex-a15_neon-vfpv4 "$OUT/bin/tailscaled-arm"    tailscale
 pack arm_cortex-a9_vfpv3-d16   "$OUT/bin/tailscaled-arm"    tailscale
 pack aarch64_cortex-a53        "$OUT/bin/tailscaled-arm64"  tailscale
-# micro: mips_24kc only (matches the shipped feed)
-pack mips_24kc                 "$OUT/bin/tailscaled-micro-mips" tailscale-micro
+# micro for every arch: strictly smaller and lower-RAM (no netstack/gVisor). A GL
+# router does subnet routing via the kernel TUN, so micro runs on every target; it
+# is the safe build on low-RAM boxes (128MB e750/mango/ar750) where full+netstack
+# can OOM under `tailscale up`. setup.sh auto-selects micro on <=256MB devices, and
+# now finds one for every arch instead of only mips_24kc.
+pack mips_24kc                 "$OUT/bin/tailscaled-micro-mips"   tailscale-micro
+pack mipsel_24kc               "$OUT/bin/tailscaled-micro-mipsle" tailscale-micro
+pack arm_cortex-a7             "$OUT/bin/tailscaled-micro-arm"    tailscale-micro
+pack arm_cortex-a7_neon-vfpv4  "$OUT/bin/tailscaled-micro-arm"    tailscale-micro
+pack arm_cortex-a15_neon-vfpv4 "$OUT/bin/tailscaled-micro-arm"    tailscale-micro
+pack arm_cortex-a9_vfpv3-d16   "$OUT/bin/tailscaled-micro-arm"    tailscale-micro
+pack aarch64_cortex-a53        "$OUT/bin/tailscaled-micro-arm64"  tailscale-micro
 
 echo ">>> done. ipks:"
 find "$OUT" -name '*.ipk' -printf '  %p  %s bytes\n' | sort

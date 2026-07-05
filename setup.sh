@@ -26,7 +26,7 @@ CUSTOMFEEDS="/etc/opkg/customfeeds.conf"
 
 # Measured installed footprints (KB), largest arch, from the built .ipks:
 #   full tailscale binary: mips 25600, arm/arm64 ~22208; GUI pkgs ~60
-#   tailscale-micro (mips_24kc only): 16896
+#   tailscale-micro (all arches): ~17000
 FULL_INSTALL_KB=26000     # full binary worst case + GUI
 MICRO_INSTALL_KB=17000    # micro binary + GUI
 HEADROOM_KB=2048          # opkg control files + flash slack (.ipk downloads to RAM /tmp)
@@ -81,7 +81,7 @@ $(opkg print-architecture)
 Report this arch list on the repo and I'll add a build."
 log "  device arch: $ARCH  ->  $BASE/$ARCH"
 
-# does this arch ship a -micro build? (only mips_24kc does today) -----------------
+# does this arch ship a -micro build? (all arches ship one; probed, not assumed) --
 MICRO_OK=0
 if curl -fsSL "$BASE/$ARCH/Packages" 2>/dev/null | grep -q '^Package: tailscale-micro$'; then
 	MICRO_OK=1
@@ -127,7 +127,7 @@ LOWRAM_NOMICRO=0
 if [ -n "$FORCE_TIER" ]; then
 	TIER="$FORCE_TIER"
 	if [ "$TIER" = micro ] && [ "$MICRO_OK" != 1 ]; then
-		die "no -micro build exists for $ARCH; only mips_24kc has one. Re-run without --micro."
+		die "no -micro build exists for $ARCH. Re-run without --micro, or report the arch on the repo to add a build."
 	fi
 	if [ "$TIER" = full ] && [ "$LOWRAM" = 1 ]; then
 		log "  WARNING: forcing full on a low-RAM device (~$((MEM_KB/1024)) MB); full links netstack and may OOM. -micro is safer."
