@@ -20,7 +20,7 @@ Built for **seven** GL architectures (see the table below); GL-E750/E750V2 = QCA
 Versions track upstream Tailscale stable and are rebuilt automatically (see [Automatic updates](#automatic-updates)); the sizes above are approximate.
 | `gl-sdk4-tailscale` | git-2025.115 | ~7KB | GL backend: init, rpcd handler, firewall/hotplug, `gl_tailscale`. |
 | `gl-sdk4-ui-tailscaleview` | git-2025.244 | ~18KB | The admin-UI Tailscale panel (menu + web view + i18n). |
-| `gl-sdk4-tailscale-mullvad` | 0.1.0 | ~9KB | **Beta (not yet device-verified).** Mullvad exit-node picker inside the panel: country (flag) → city selects under the stock Exit Node row. Needs the Tailscale Mullvad add-on and the router assigned to Mullvad in the admin console. Source + docs: [glinet-tailscale-mullvad](https://github.com/DigitalCyberSoft/glinet-tailscale-mullvad). |
+| `gl-sdk4-tailscale-mullvad` | 0.1.6 | ~13KB | Mullvad exit-node picker inside the panel: country (flag) → city selects, active-node indicator, live switching. Verified end-to-end on a GL-XE3000. Needs the Tailscale Mullvad add-on and a device slot for the router (see the source repo README for the ACL/tag gotchas). Source + docs: [glinet-tailscale-mullvad](https://github.com/DigitalCyberSoft/glinet-tailscale-mullvad). |
 
 The two `gl-sdk4-*` packages were extracted from GL's own XE3000 firmware image (they are
 architecture-independent shell/Lua/JS — no compiled code) and repackaged for `mips_24kc`.
