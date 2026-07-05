@@ -495,4 +495,48 @@ function M.set_binary(params)
     ngx.pipe.spawn({"/usr/bin/gl_tailscale", "restart"})
 end
 
+--[[
+    @method-type: call
+    @method-name: check_update
+    @method-desc: Refresh the feed and report which feed packages have updates
+
+    @out bool    update_available
+    @out array   packages            list of {name, installed, available}
+--]]
+function M.check_update()
+    -- refresh package lists (unsigned feed -> --force-signature keeps its list)
+    local u = ngx.pipe.spawn({"opkg", "update", "--force-signature"})
+    if u then u:wait() end
+
+    local feed = {
+        ["tailscale"] = true, ["tailscale-micro"] = true,
+        ["gl-sdk4-tailscale"] = true, ["gl-sdk4-ui-tailscaleview"] = true,
+        ["gl-sdk4-tailscale-mullvad"] = true,
+    }
+    local packages = {}
+    local p = ngx.pipe.spawn({"opkg", "list-upgradable"})
+    local out = p and p:stdout_read_all() or ""
+    for line in out:gmatch("[^\n]+") do
+        -- opkg list-upgradable prints: "name - installed_ver - available_ver"
+        local name, old, new = line:match("^(%S+)%s+%-%s+(%S+)%s+%-%s+(%S+)")
+        if name and feed[name] then
+            packages[#packages + 1] = { name = name, installed = old, available = new }
+        end
+    end
+
+    return { update_available = (#packages > 0), packages = packages }
+end
+
+--[[
+    @method-type: call
+    @method-name: do_update
+    @method-desc: Update all installed feed packages to the current build in one shot
+--]]
+function M.do_update()
+    -- Detached: glits-upgrade reinstalls gl-sdk4-tailscale, whose postinst restarts
+    -- rpcd -- which would kill THIS rpc worker mid-call. Fire-and-forget; the panel
+    -- waits then refetches. Progress lands in /tmp/glits-upgrade.log.
+    ngx.pipe.spawn({"sh", "-c", "(/usr/bin/glits-upgrade >/tmp/glits-upgrade.log 2>&1) &"}):wait()
+end
+
 return M

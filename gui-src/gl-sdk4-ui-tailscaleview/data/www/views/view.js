@@ -778,6 +778,14 @@ module.exports = function(t) {
           return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "set_binary", {
             source: t
           }])
+        },
+        checkUpdate: function() {
+          return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "check_update", {}], {
+            timeout: 6e4
+          })
+        },
+        doUpdate: function() {
+          return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "do_update", {}])
         }
       };
     var l = r,
@@ -791,6 +799,7 @@ module.exports = function(t) {
           dns: [],
           binary_source: "feed",
           binary_present: !0,
+          updateInfo: null,
           config: {
             enabled: !1,
             lan_enabled: !1,
@@ -873,6 +882,33 @@ module.exports = function(t) {
               duration: 0
             }), this.changeShowDisableMask(!0), l.setBinary(t).then((t => {
               this.changeShowDisableMask(!1), this.$message.closeAll(), t && t.err_msg ? this.$message.error(t.err_code + ", " + t.err_msg) : (this.$message.success(this.$t("msg.success")), this.getConfig())
+            }), (() => {
+              this.changeShowDisableMask(!1), this.$message.closeAll()
+            }))
+          },
+          handleCheckUpdate() {
+            this.$message.closeAll(), this.$message({
+              message: this.$t("msg.being_process"),
+              iconClass: "iconfont icon-loading",
+              duration: 0
+            }), this.changeShowDisableMask(!0), l.checkUpdate().then((t => {
+              this.changeShowDisableMask(!1), this.$message.closeAll(), t && t.err_msg ? this.$message.error(t.err_code + ", " + t.err_msg) : (this.updateInfo = t || {
+                update_available: !1,
+                packages: []
+              }, this.updateInfo.update_available || this.$message.success(this.$t("tailscale.up_to_date")))
+            }), (() => {
+              this.changeShowDisableMask(!1), this.$message.closeAll()
+            }))
+          },
+          handleUpdateAll() {
+            this.$message.closeAll(), this.$message({
+              message: this.$t("msg.being_process"),
+              iconClass: "iconfont icon-loading",
+              duration: 0
+            }), this.changeShowDisableMask(!0), l.doUpdate().then((() => {
+              clearTimeout(this.waitTimeId), this.waitTimeId = setTimeout((() => {
+                this.changeShowDisableMask(!1), this.$message.closeAll(), this.$message.success(this.$t("msg.success")), this.updateInfo = null, this.getConfig()
+              }), 3e4)
             }), (() => {
               this.changeShowDisableMask(!1), this.$message.closeAll()
             }))
@@ -1041,7 +1077,17 @@ module.exports = function(t) {
             },
             expression: "binary_source === 'admonstrator'"
           }
-        })], 1)]), t.binary_present ? t._e() : e("li", [e("div", [t._v(" " + t._s(t.$t("tailscale.binary_missing_tips")) + " ")])]), e("li", [e("div", [t._v(t._s(t.$t("core.enable")) + " Tailscale")]), e("div", [e("gl-switch", {
+        })], 1)]), t.binary_present ? t._e() : e("li", [e("div", [t._v(" " + t._s(t.$t("tailscale.binary_missing_tips")) + " ")])]), e("li", [e("div", [t._v(" " + t._s(t.$t("tailscale.updates_label")) + " ")]), e("div", [null === t.updateInfo ? e("span", {
+          staticClass: "text-btn",
+          on: {
+            click: t.handleCheckUpdate
+          }
+        }, [t._v(t._s(t.$t("tailscale.check_update_btn")))]) : t.updateInfo.update_available ? e("span", {
+          staticClass: "text-btn",
+          on: {
+            click: t.handleUpdateAll
+          }
+        }, [t._v(t._s(t.$t("tailscale.update_all_btn")))]) : e("span", [t._v(t._s(t.$t("tailscale.up_to_date")))])])]), e("li", [e("div", [t._v(t._s(t.$t("core.enable")) + " Tailscale")]), e("div", [e("gl-switch", {
           attrs: {
             size: "small"
           },

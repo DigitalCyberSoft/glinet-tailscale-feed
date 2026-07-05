@@ -1,0 +1,43 @@
+#!/bin/sh
+# Update every installed glinet-tailscale-feed package to the feed's current build in
+# one shot -- the engine behind the panel's "Updates" section (rpc do_update) and
+# usable on the CLI. Fixes opkg NOT cascading upgrades through unversioned Depends.
+#
+# The feed is unsigned, so --force-signature is required on update AND install (plain
+# `opkg update` prunes the unsigned list). Respects the chosen binary source:
+#   feed         -> opkg install the tailscale / tailscale-micro package
+#   admonstrator -> ts-admon-update (their build is not opkg-managed)
+
+opkg update --force-signature >/dev/null 2>&1 || true
+if ! opkg info gl-sdk4-tailscale >/dev/null 2>&1; then
+    echo "glits-upgrade: feed package list unavailable; check network/DNS" >&2
+    exit 1
+fi
+
+rc=0
+bsrc=$(uci -q get tailscale.settings.binary_source)
+if [ "$bsrc" = "admonstrator" ]; then
+    [ -x /usr/bin/ts-admon-update ] && { /usr/bin/ts-admon-update || rc=1; }
+else
+    # reinstall whichever feed binary tier is installed (nothing if neither)
+    if opkg list-installed 2>/dev/null | grep -q '^tailscale-micro '; then
+        opkg install --force-signature tailscale-micro || rc=1
+    elif opkg list-installed 2>/dev/null | grep -q '^tailscale '; then
+        opkg install --force-signature tailscale || rc=1
+    fi
+fi
+
+# GUI packages last (deps resolve to whatever binary is present). Install
+# gl-sdk4-tailscale last so its postinst (which restarts rpcd) runs at the end.
+for p in gl-sdk4-tailscale-mullvad gl-sdk4-ui-tailscaleview gl-sdk4-tailscale; do
+    if opkg list-installed 2>/dev/null | grep -q "^$p "; then
+        opkg install --force-signature "$p" || rc=1
+    fi
+done
+
+if [ "$rc" = 0 ]; then
+    echo "glits-upgrade: all installed feed packages are at the current build."
+else
+    echo "glits-upgrade: one or more installs failed" >&2
+fi
+exit $rc

@@ -1,5 +1,5 @@
 Package: gl-sdk4-ui-tailscaleview
-Version: 1:1.1.4-1
+Version: 1:1.1.5-1
 Depends: libc, gl-sdk4-tailscale, gl-sdk4-ui-core
 Source: feeds/glinet/gl-ui4.0/module/tailscaleview
 SourceName: gl-sdk4-ui-tailscaleview
