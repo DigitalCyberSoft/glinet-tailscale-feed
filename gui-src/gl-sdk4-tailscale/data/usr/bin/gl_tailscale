@@ -16,6 +16,19 @@ TAILSCALE_DNS_SERVER="100.100.100.100"
 # Access LAN/WAN" toggles advertise no routes at all.
 command -v ipcalc_network >/dev/null 2>&1 || ipcalc_network() { ipcalc.sh "$@"; }
 
+# GL firmware >= 4.9 manages "Advertise as Exit Node" natively; on those builds
+# defer to it and do not pass --advertise-exit-node ourselves (avoids fighting
+# GL's run_exit_node UCI state). /etc/glversion holds e.g. "4.3.26" / "4.9.0".
+is_fw49_plus() {
+    local v major minor
+    v=$(awk '{print $1}' /etc/glversion 2>/dev/null)
+    [ -z "$v" ] && return 1
+    major=${v%%.*}; minor=${v#*.}; minor=${minor%%.*}
+    [ "$major" -gt 4 ] 2>/dev/null && return 0
+    { [ "$major" -eq 4 ] && [ "$minor" -ge 9 ]; } 2>/dev/null && return 0
+    return 1
+}
+
 if [ "$action" = "set_route" ];then
     sleep 5
     ip route add 100.64.0.0/10 dev tailscale0
@@ -217,11 +230,12 @@ if [ "$action" = "restart" ];then
         if [ -n "$exit_node_ip" ];then
             add_exit_node_rule
             param="$param --exit-node-allow-lan-access --exit-node=$exit_node_ip"
-        elif [ "$(uci -q get tailscale.settings.advertise_exit_node)" = "1" ]; then
+        elif [ "$(uci -q get tailscale.settings.advertise_exit_node)" = "1" ] && ! is_fw49_plus; then
             # Advertise this device AS an exit node (offers 0.0.0.0/0 + ::/0 to the
             # tailnet). Mutually exclusive with using an exit node above (tailscale
             # rejects both). Needs approval in the Tailscale admin console, and the
             # tailscale0->wan firewall forwarding (see firewall.tailscale.sh).
+            # Skipped on GL 4.9+ where GL manages exit-node advertisement natively.
             param="$param --advertise-exit-node"
         fi
 

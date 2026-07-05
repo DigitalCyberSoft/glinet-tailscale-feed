@@ -6,6 +6,19 @@ TS_WAN=tailscale_wan
 WAN_TS=wan_tailscale
 TS_IFNAME=tailscale0
 
+# GL firmware >= 4.9 owns the tailscale0 IP Masquerading toggle natively; on
+# those builds we must NOT set or delete it (would trample GL's state). Only
+# manage tailscale0 masq on pre-4.9. /etc/glversion holds e.g. "4.3.26".
+is_fw49_plus() {
+    local v major minor
+    v=$(awk '{print $1}' /etc/glversion 2>/dev/null)
+    [ -z "$v" ] && return 1
+    major=${v%%.*}; minor=${v#*.}; minor=${minor%%.*}
+    [ "$major" -gt 4 ] 2>/dev/null && return 0
+    { [ "$major" -eq 4 ] && [ "$minor" -ge 9 ]; } 2>/dev/null && return 0
+    return 1
+}
+
 add_zone()
 {
     rule_exist=$(uci -q get firewall.$TS_ZONE)
@@ -125,10 +138,14 @@ restart()
     # LAN gateway (panel toggle "lan_gateway"): outbound SNAT so hosts behind the
     # LAN reach the tailnet without running Tailscale. Independent of lan_enabled
     # (which is the inbound advertise-routes direction).
-    if [ "$enabled" = "1" ] && [ "$lan_gateway" = "1" ]; then
-        ret=$(ensure_ts_masq) && [ "$ret" = "1" ] && let need_reload+=1
-    else
-        ret=$(del_ts_masq) && [ "$ret" = "1" ] && let need_reload+=1
+    # On GL 4.9+, GL owns the tailscale0 masquerade toggle natively -> don't touch
+    # it. On pre-4.9 the plugin manages it (gated on the lan_gateway panel toggle).
+    if ! is_fw49_plus; then
+        if [ "$enabled" = "1" ] && [ "$lan_gateway" = "1" ]; then
+            ret=$(ensure_ts_masq) && [ "$ret" = "1" ] && let need_reload+=1
+        else
+            ret=$(del_ts_masq) && [ "$ret" = "1" ] && let need_reload+=1
+        fi
     fi
 
     if [ "$enabled" = "1" ] && ([ "$lan_enabled" = "1" ] || [ -n "$exit_node_ip" ] || [ "$lan_gateway" = "1" ]); then

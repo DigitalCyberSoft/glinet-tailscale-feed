@@ -12,6 +12,20 @@ local validator = require "gl.validator"
 
 local M = {}
 
+-- GL firmware >= 4.9 ships native Tailscale exit-node / IP-masquerade controls.
+-- Detect so the panel can hide/defer the features GL now provides natively
+-- (mirrors GL's own coexistence handling). /etc/glversion holds e.g. "4.3.26".
+local function fw_is_49_plus()
+    local f = io.open("/etc/glversion", "r")
+    if not f then return false end
+    local v = f:read("*l") or ""
+    f:close()
+    local major, minor = v:match("^(%d+)%.(%d+)")
+    major, minor = tonumber(major), tonumber(minor)
+    if not major then return false end
+    return major > 4 or (major == 4 and minor >= 9)
+end
+
 -- no_peers=true adds `--peers=false`: the daemon then omits the peer list from
 -- the JSON. On a tailnet with many peers that shrinks the payload ~17x (52KB ->
 -- 3KB on a real GL-E750) and the matching cjson.decode cost with it. Callers that
@@ -242,6 +256,8 @@ function M.get_config()
     res.lan_gateway = c:get("tailscale", "settings", "lan_gateway") == "1"
     res.advertise_exit_node = c:get("tailscale", "settings", "advertise_exit_node") == "1"
     res.exit_node_ip = c:get("tailscale", "settings", "exit_node_ip")
+    -- On 4.9+ the panel hides "Advertise as Exit Node" (GL provides it natively).
+    res.firmware_49_plus = fw_is_49_plus()
 
     if lanip and lanmask then
         local lan_info = lnet.ipcalc({lanip, lanmask})
