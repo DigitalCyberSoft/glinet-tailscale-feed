@@ -8,40 +8,27 @@ TS_FIREWALL_SECTION=gltailscale
 TAILSCALE_ROUTE_TABLE=52
 TAILSCALE_DNS_SERVER="100.100.100.100"
 
-# Older GL firmwares (e.g. GL-E750 4.3.26) don't ship the `ipcalc_network`
-# helper that newer builds provide, and no package on-device owns it. Stock
-# /bin/ipcalc.sh emits the same NETWORK=/PREFIX= lines this script parses, so
-# fall back to it when ipcalc_network is absent. Without this, the LAN/WAN
-# subnet CIDRs computed below come out empty and the panel's "Allow Remote
-# Access LAN/WAN" toggles advertise no routes at all.
+# Older GL firmwares (e.g. GL-E750 4.3.26) don't ship the `ipcalc_network` helper
+# newer builds provide, and no package on-device owns it. Stock /bin/ipcalc.sh emits
+# the same NETWORK=/PREFIX= lines this script parses, so fall back to it when
+# ipcalc_network is absent (else LAN/WAN subnet CIDRs come out empty and the panel's
+# route toggles advertise nothing).
 command -v ipcalc_network >/dev/null 2>&1 || ipcalc_network() { ipcalc.sh "$@"; }
 
-# GL firmware >= 4.9 manages "Advertise as Exit Node" natively; on those builds
-# defer to it and do not pass --advertise-exit-node ourselves (avoids fighting
-# GL's run_exit_node UCI state). /etc/glversion holds e.g. "4.3.26" / "4.9.0".
-is_fw49_plus() {
-    local v major minor
-    v=$(awk '{print $1}' /etc/glversion 2>/dev/null)
-    [ -z "$v" ] && return 1
-    major=${v%%.*}; minor=${v#*.}; minor=${minor%%.*}
-    [ "$major" -gt 4 ] 2>/dev/null && return 0
-    { [ "$major" -eq 4 ] && [ "$minor" -ge 9 ]; } 2>/dev/null && return 0
-    return 1
-}
+if [ "$action" = "set_route" ];then
+    sleep 5
+    ip route add 100.64.0.0/10 dev tailscale0
+fi
 
 # Preserve the whole Tailscale stack across a GL firmware upgrade by listing it in
-# /etc/sysupgrade.conf, which is itself a preserved conffile -- so the list survives
-# every future flash, unlike a package /lib/upgrade/keep.d that must be on disk at
-# flash time (the reason tailscaled reverted before). The preserved files shadow
-# GL's older bundled copies in the new overlay, so our version keeps OVERRIDING GL
-# stock, offline, at the same version. Gated on the panel toggle
-# settings.keep_on_upgrade (unset = on). opkg's DB still resets on a flash, so the
-# panel may show GL's version with an "update" prompt until a manual reinstall; the
-# binary that runs is ours regardless. Managed block, rewritten each call.
+# /etc/sysupgrade.conf (itself a preserved conffile, so the list survives every future
+# flash -- unlike a package keep.d that must be on disk at flash time). Gated on the
+# panel toggle settings.keep_on_upgrade (unset = off; off by default). Managed block,
+# rewritten each call.
 apply_keep_on_upgrade() {
     local su=/etc/sysupgrade.conf keep
     keep=$(uci -q get tailscale.settings.keep_on_upgrade)
-    [ -z "$keep" ] && keep=1
+    [ -z "$keep" ] && keep=0
     touch "$su"
     sed -i '/tailscale-keep-BEGIN/,/tailscale-keep-END/d' "$su" 2>/dev/null
     [ "$keep" = "1" ] || return 0
@@ -73,10 +60,10 @@ if [ "$action" = "keep" ]; then
     exit 0
 fi
 
-if [ "$action" = "set_route" ];then
-    sleep 5
-    ip route add 100.64.0.0/10 dev tailscale0
-fi
+apply_tailscale_mtu() {
+    ts_mtu=$(uci -q get tailscale.settings.mtu)
+    [ -n "$ts_mtu" ] && ip link set dev tailscale0 mtu "$ts_mtu" 2>/dev/null
+}
 
 add_policy_route()
 {
@@ -101,26 +88,32 @@ del_policy_route()
     fi
 }
 
-add_guest_policy_route()
+add_network_policy_route()
 {
-    guest_disable=$(uci -q get network.guest.disabled)
-    exit_node_ip=$(uci -q get tailscale.settings.exit_node_ip)
-    if [ -n "$exit_node_ip" ] && [ "$guest_disable" = "0" ]; then
-        guestip=$(ubus call network.interface.guest status|jsonfilter -e '@["ipv4-address"][0].address')
-        guestmask=$(ubus call network.interface.guest status|jsonfilter -e '@["ipv4-address"][0].mask')
-        if [ -n "$guestip" ] && [ -n "$guestmask" ] ;then
-            guest_network=$(ipcalc_network $guestip $guestmask | awk -F= '/NETWORK/{print $2}')
-            guest_mask=$(ipcalc_network $guestip $guestmask | awk -F= '/PREFIX/{print $2}')
-        fi
+    local interface=$1
 
-        if [ -n "$guest_network" ] && [ -n "$guest_mask" ]; then
-            guest_ip="$guest_network/$guest_mask"
-            policy_route_param="from $guest_ip table main"
-            /sbin/ip rule add $policy_route_param
-            echo $policy_route_param >> $TS_POLICY_ROUTE
+    local disable=$(uci -q get network.$interface.disabled)
+    exit_node_ip=$(uci -q get tailscale.settings.exit_node_ip)
+
+    if [ -n "$exit_node_ip" ] && [ "$disable" = "0" ]; then
+        local ipaddr=$(ubus call network.interface.$interface status | jsonfilter -e '@["ipv4-address"][0].address')
+        local netmask=$(ubus call network.interface.$interface status | jsonfilter -e '@["ipv4-address"][0].mask')
+
+        if [ -n "$ipaddr" ] && [ -n "$netmask" ]; then
+            local network=$(ipcalc_network $ipaddr $netmask | awk -F= '/NETWORK/{print $2}')
+            local prefix=$(ipcalc_network $ipaddr $netmask | awk -F= '/PREFIX/{print $2}')
+
+            if [ -n "$network" ] && [ -n "$prefix" ]; then
+                local cidr="$network/$prefix"
+                local policy_route_param="from $cidr table main"
+
+                /sbin/ip rule add $policy_route_param
+                echo $policy_route_param >> $TS_POLICY_ROUTE
+            fi
         fi
     fi
 }
+
 
 add_exit_node_rule()
 {
@@ -151,28 +144,89 @@ add_ts_fw_rule()
     fi
 }
 
+start_dns_poller() {
+    local pid_file="/var/run/tailscale_dns_poller.pid"
+
+    if [ -f "$pid_file" ] && kill -0 $(cat "$pid_file") 2>/dev/null; then
+        return
+    fi
+
+    {
+        local suffix=""
+        local interval=2
+        local max_interval=30
+        local max_attempts=15
+
+        for attempt in $(seq 1 $max_attempts); do
+            suffix=$(timeout 2 tailscale status -json 2>/dev/null | jsonfilter -e '@.MagicDNSSuffix')
+
+            if [ -n "$suffix" ] && [ "$suffix" != "null" ]; then
+                current_domain=$(uci get dhcp.@dnsmasq[0].domain 2>/dev/null)
+                if [ "$suffix" != "$current_domain" ]; then
+                    uci set dhcp.@dnsmasq[0].domain="$suffix"
+                    uci commit dhcp
+                    /etc/init.d/dnsmasq restart
+                fi
+                break
+            fi
+
+            sleep $interval
+
+            interval=$((interval * 2))
+            [ $interval -gt $max_interval ] && interval=$max_interval
+        done
+
+        rm -f "$pid_file"
+    } &
+
+    echo $! > "$pid_file"
+}
+
 modify_dns_resolv()
 {
     dns_suffix=$(timeout 2 tailscale status -json | jsonfilter -e '@.MagicDNSSuffix')
     rule_exist=$(grep "ts.net/100.100.100.100" /etc/dnsmasq.conf)
-    domain_orig=$(uci get dhcp.@dnsmasq[0].domain)
-    domain_orig_clean=$(echo "$domain_orig" | sed "s/.*ts.net //g")
+    current_domain=$(uci get dhcp.@dnsmasq[0].domain)
 
     if [ "$1" = "1" ]; then
-        if [ "$rule_exist" = "" ]; then
-            [ "$dns_suffix" = "" ] && dns_suffix="ts.net"
-            echo "server=/$dns_suffix/100.100.100.100" >> /etc/dnsmasq.conf
-            uci set dhcp.@dnsmasq[0].domain="$dns_suffix $domain_orig_clean"
-            uci commit dhcp
-            /etc/init.d/dnsmasq restart
+        if [ -z "$(uci -q get tailscale.settings.original_domain)" ]; then
+            uci set tailscale.settings.original_domain="$current_domain"
+            uci commit tailscale
         fi
+
+        if [ "$rule_exist" = "" ]; then
+            echo "server=/ts.net/100.100.100.100" >> /etc/dnsmasq.conf
+        fi
+
+        if [ -n "$dns_suffix" ]; then
+            uci set dhcp.@dnsmasq[0].domain="$dns_suffix"
+            uci commit dhcp
+        else
+            start_dns_poller
+        fi
+        /etc/init.d/dnsmasq restart
+
     else
-        uci set dhcp.@dnsmasq[0].domain="$domain_orig_clean"
+        local pid_file="/var/run/tailscale_dns_poller.pid"
+        if [ -f "$pid_file" ]; then
+            kill $(cat "$pid_file") 2>/dev/null
+            rm -f "$pid_file"
+        fi
+
+        original_domain=$(uci -q get tailscale.settings.original_domain)
+        if [ -n "$original_domain" ]; then
+            uci set dhcp.@dnsmasq[0].domain="$original_domain"
+            uci delete tailscale.settings.original_domain
+            uci commit tailscale
+        else
+            uci set dhcp.@dnsmasq[0].domain="lan"
+        fi
         uci commit dhcp
+
         if [ -n "$rule_exist" ]; then
             sed -i '/ts\.net\/100\.100\.100\.100/d' /etc/dnsmasq.conf
-            /etc/init.d/dnsmasq restart
         fi
+        /etc/init.d/dnsmasq restart
     fi
 }
 
@@ -188,6 +242,19 @@ if [ "$action" = "restart" ];then
 
     del_policy_route
     add_ts_fw_rule
+
+    masq=$(uci -q get tailscale.settings.lan_gateway)
+    if [ "$masq" = "1" ]; then
+        uci set firewall.tailscale0.masq='1'
+        uci commit firewall
+        /etc/init.d/firewall restart
+    else
+        if uci get firewall.tailscale0.masq >/dev/null 2>&1; then
+            uci set firewall.tailscale0.masq='0'
+            uci commit firewall
+            /etc/init.d/firewall restart
+        fi
+    fi
 
     sys_mode=$(uci -q get glconfig.general.mode)
     if [ "$sys_mode" != "router" ]; then
@@ -216,6 +283,14 @@ if [ "$action" = "restart" ];then
         fi
         [ -n "$secondwan_network" -a -n "$secondwan_mask" ] && secondwan_ip="$secondwan_network/$secondwan_mask"
 
+        usbwanip=$(ubus call network.interface.usbwan status|jsonfilter -e '@["ipv4-address"][0].address')
+        usbwanmask=$(ubus call network.interface.usbwan status|jsonfilter -e '@["ipv4-address"][0].mask')
+        if [ -n "$usbwanip" ] && [ -n "$usbwanmask" ] ;then
+            usbwan_network=$(ipcalc_network $usbwanip $usbwanmask | awk -F= '/NETWORK/{print $2}')
+            usbwan_mask=$(ipcalc_network $usbwanip $usbwanmask | awk -F= '/PREFIX/{print $2}')
+        fi
+        [ -n "$usbwan_network" -a -n "$usbwan_mask" ] && usbwan_ip="$usbwan_network/$usbwan_mask"
+
         wwanip=$(ubus call network.interface.wwan status|jsonfilter -e '@["ipv4-address"][0].address')
         wwanmask=$(ubus call network.interface.wwan status|jsonfilter -e '@["ipv4-address"][0].mask')
         if [ -n "$wwanip" ] && [ -n "$wwanmask" ] ;then
@@ -238,9 +313,10 @@ if [ "$action" = "restart" ];then
         lan_mask=$(ipcalc_network $lanip $lanmask | awk -F= '/PREFIX/{print $2}')
         [ -n "$lan_network" -a -n "$lan_mask" ] && lan_ip="$lan_network/$lan_mask"
 
+        run_exit_node=$(uci -q get tailscale.settings.advertise_exit_node)
         exit_node_ip=$(uci -q get tailscale.settings.exit_node_ip)
-        [ -n "$exit_node_ip" ] && lan_enabled="1" || lan_enabled=$(uci -q get tailscale.settings.lan_enabled)
-        [ -n "$exit_node_ip" ] && wan_enabled="1" || wan_enabled=$(uci -q get tailscale.settings.wan_enabled)
+        lan_enabled=$(uci -q get tailscale.settings.lan_enabled)
+        wan_enabled=$(uci -q get tailscale.settings.wan_enabled)
         
         if [ "$lan_enabled" = "1" ]; then
             if [ -n "$lan_ip" ]; then
@@ -261,6 +337,10 @@ if [ "$action" = "restart" ];then
                 [ -n "$routes" ] && routes="$routes,$secondwan_ip" || routes="$secondwan_ip"
             fi
 
+            if [ -n "$usbwan_ip" ]; then
+                [ -n "$routes" ] && routes="$routes,$usbwan_ip" || routes="$usbwan_ip"
+            fi
+
             if [ -n "$tethering_ip" ]; then
                 [ -n "$routes" ] && routes="$routes,$tethering_ip" || routes="$tethering_ip"
             fi
@@ -271,17 +351,14 @@ if [ "$action" = "restart" ];then
         else
             param=""
         fi
+
+        if [ "$run_exit_node" = "1" ]; then
+            param="$param --advertise-exit-node"
+        fi
         
         if [ -n "$exit_node_ip" ];then
             add_exit_node_rule
             param="$param --exit-node-allow-lan-access --exit-node=$exit_node_ip"
-        elif [ "$(uci -q get tailscale.settings.advertise_exit_node)" = "1" ] && ! is_fw49_plus; then
-            # Advertise this device AS an exit node (offers 0.0.0.0/0 + ::/0 to the
-            # tailnet). Mutually exclusive with using an exit node above (tailscale
-            # rejects both). Needs approval in the Tailscale admin console, and the
-            # tailscale0->wan firewall forwarding (see firewall.tailscale.sh).
-            # Skipped on GL 4.9+ where GL manages exit-node advertisement natively.
-            param="$param --advertise-exit-node"
         fi
 
         [ -n "$lan_ip" ] && add_policy_route $lan_ip
@@ -290,13 +367,17 @@ if [ "$action" = "restart" ];then
 
         [ -n "$secondwan_ip" ] && add_policy_route $secondwan_ip
 
+        [ -n "$usbwan_ip" ] && add_policy_route $usbwan_ip
+
         [ -n "$wwan_ip" ] && add_policy_route $wwan_ip
 
         [ -n "$tethering_ip" ] && add_policy_route $tethering_ip
 
-        add_guest_policy_route
+        add_network_policy_route "guest"
+        add_network_policy_route "iot"
         
         timeout 10 /usr/sbin/tailscale up --reset --accept-routes $param --timeout 3s --accept-dns=false > /dev/null
+        apply_tailscale_mtu
     else
         /etc/init.d/tailscale stop
     fi
