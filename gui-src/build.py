@@ -89,7 +89,12 @@ def build(pkgdir):
         with open(os.path.join(work, "debian-binary"), "w") as f:
             f.write("2.0\n")
         os.makedirs(OUT, exist_ok=True)
-        out = os.path.join(OUT, f"{name}_{ver}_{arch}.ipk")
+        # Debian convention: the epoch (everything up to and including the first
+        # ':') stays in the Version metadata but is omitted from the .ipk filename --
+        # a colon in a served filename/URL is fragile. mkindex reads Version from the
+        # control (with epoch) and Filename from disk (without), so they stay in sync.
+        file_ver = ver.split(":", 1)[1] if ":" in ver else ver
+        out = os.path.join(OUT, f"{name}_{file_ver}_{arch}.ipk")
         subprocess.run(
             ["tar", "--numeric-owner", "--owner=0", "--group=0", "--mtime=@0",
              "-czf", out, "-C", work,
