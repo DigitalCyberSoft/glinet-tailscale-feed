@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy_retry.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Assemble feed site (newest 7 releases + GUI + static)
@@ -108,5 +108,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      # deploy-pages intermittently returns "Deployment failed, try again later"
+      # (a GitHub Pages backend transient, not a content error). One inline retry
+      # absorbs it so the automatic feed doesn't need a manual re-dispatch. A second
+      # genuine failure still fails the job -- the error is not swallowed.
       - id: deploy
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Wait out the Pages backend transient
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 45
+      - id: deploy_retry
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
