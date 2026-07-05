@@ -22,6 +22,8 @@
         "dns_warning_tips": "Cuando se utiliza una dirección IP de la intranet como DNS, es posible que no se pueda acceder al servidor DNS.",
         "keep_on_upgrade_label": "Mantener tras actualizar el firmware",
         "keep_on_upgrade_tips": "Si está activado, los paquetes de Tailscale instalados se conservan al actualizar el firmware de GL (mediante /etc/sysupgrade.conf), de modo que sigan reemplazando la versión más antigua incluida en el firmware en lugar de revertirse.",
+        "killswitch_label": "Interruptor de emergencia del nodo de salida",
+        "killswitch_tips": "Mientras se usa un nodo de salida, bloquea el acceso a Internet de la LAN si el nodo de salida deja de estar disponible, de modo que el tráfico se detenga en lugar de filtrarse por la WAN. Activado de forma predeterminada.",
         "lan_gateway_label": "Permitir que los dispositivos LAN usen Tailscale",
         "lan_gateway_tips": "Si esta opción está activada, los dispositivos de la red local (LAN) pueden acceder a la red Tailscale a través de este router sin instalar Tailscale en cada dispositivo.",
         "advertise_exit_node_label": "Anunciar como nodo de salida",

@@ -22,6 +22,8 @@
         "dns_warning_tips": "使用内网 IP 地址作为 DNS 时，您可能会无法访问 DNS 服务器。",
         "keep_on_upgrade_label": "固件升级后保留",
         "keep_on_upgrade_tips": "启用后，已安装的 Tailscale 软件包将在 GL 固件升级后保留（通过 /etc/sysupgrade.conf），从而继续覆盖固件自带的旧版本，而不会被还原。",
+        "killswitch_label": "出口节点断网保护",
+        "killswitch_tips": "使用出口节点时，如果出口节点变得不可达，则阻断 LAN 的互联网访问，使流量被丢弃而不是从 WAN 泄漏。默认启用。",
         "lan_gateway_label": "允许 LAN 设备使用 Tailscale",
         "lan_gateway_tips": "若此选项启用，LAN 内的设备无需自行安装 Tailscale，即可通过本路由器访问 Tailscale 虚拟网络。",
         "advertise_exit_node_label": "宣告为出口节点",

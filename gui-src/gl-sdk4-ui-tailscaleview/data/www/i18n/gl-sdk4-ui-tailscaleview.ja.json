@@ -22,6 +22,8 @@
         "dns_warning_tips": "イントラネットのIPアドレスをDNSとして使用する場合、DNSサーバーにアクセスできないことがあります。",
         "keep_on_upgrade_label": "ファームウェア更新後も保持する",
         "keep_on_upgrade_tips": "有効にすると、インストール済みの Tailscale パッケージが GL ファームウェアの更新後も（/etc/sysupgrade.conf により）保持され、ファームウェア同梱の古いバージョンに戻されることなく、上書きした状態が維持されます。",
+        "killswitch_label": "出口ノードのキルスイッチ",
+        "killswitch_tips": "出口ノードの使用中に出口ノードが到達不能になった場合、LAN のインターネットアクセスを遮断し、トラフィックが WAN に漏れないようにします。デフォルトで有効です。",
         "lan_gateway_label": "LAN内のデバイスがTailscaleを利用できるようにする",
         "lan_gateway_tips": "このオプションを有効にすると、LAN内のデバイスは各デバイスにTailscaleをインストールしなくても、このルーター経由でTailscaleネットワークにアクセスできるようになります。",
         "advertise_exit_node_label": "出口ノードとして提供する",
