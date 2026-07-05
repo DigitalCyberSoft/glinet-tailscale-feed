@@ -245,6 +245,9 @@ function M.get_config()
     -- Panel toggle: preserve the Tailscale stack across a GL firmware upgrade
     -- (writes /etc/sysupgrade.conf). Off by default.
     res.keep_on_upgrade = c:get("tailscale", "settings", "keep_on_upgrade") == "1"
+    -- Leak-protection killswitch (blackhole LAN if a selected exit node drops).
+    -- Default on: only off when explicitly set to "0".
+    res.killswitch = c:get("tailscale", "settings", "killswitch") ~= "0"
 
     if lanip and lanmask then
         local lan_info = lnet.ipcalc({lanip, lanmask})
@@ -310,6 +313,7 @@ function M.set_config(params)
     local lan_gateway = params.lan_gateway
     local advertise_exit_node = params.advertise_exit_node
     local keep_on_upgrade = params.keep_on_upgrade
+    local killswitch = params.killswitch
     local exit_node_ip = params.exit_node_ip
 
     -- Borrowed from GL 2026: refuse when OpenVPN TAP site-to-site is active, which is
@@ -351,6 +355,10 @@ function M.set_config(params)
 
     if not validator.base(keep_on_upgrade, "boolean", true) then
         return rpc.ERROR_CODE_INVALID_PARAMS, "invalid keep_on_upgrade"
+    end
+
+    if not validator.base(killswitch, "boolean", true) then
+        return rpc.ERROR_CODE_INVALID_PARAMS, "invalid killswitch"
     end
 
     if exit_node_ip ~= "" and exit_node_ip ~= nil and not validator.ip4addr(exit_node_ip) then
@@ -401,6 +409,14 @@ function M.set_config(params)
         c:set("tailscale", "settings", "keep_on_upgrade", 0)
     end
 
+    -- nil (older panel) leaves it unchanged; default-on is handled in get_config
+    -- and the ts_killswitch binary (killswitch != 0).
+    if killswitch == true then
+        c:set("tailscale", "settings", "killswitch", 1)
+    elseif killswitch == false then
+        c:set("tailscale", "settings", "killswitch", 0)
+    end
+
     if exit_node_ip then
         c:set("tailscale", "settings", "exit_node_ip", exit_node_ip)
     else
@@ -412,6 +428,9 @@ function M.set_config(params)
     end
 
     c:commit("tailscale")
+    -- Apply leak-protection killswitch from the freshly committed settings (borrowed
+    -- from GL 2026: adds/removes the LAN blackhole rule based on exit-node usage).
+    ngx.pipe.spawn({"/usr/bin/ts_killswitch"}):wait()
     fs.sync()
     ngx.pipe.spawn({"/usr/bin/gl_tailscale", "restart"})
 end
@@ -432,6 +451,8 @@ function M.logout()
     local c = uci.cursor()
     c:set("tailscale", "settings", "exit_node_ip", "")
     c:commit("tailscale")
+    -- clear the killswitch's LAN blackhole rule now that no exit node is selected
+    ngx.pipe.spawn({"/usr/bin/ts_killswitch"}):wait()
 
     local state_file = c:get("tailscale", "settings", "state_file")
     if state_file then

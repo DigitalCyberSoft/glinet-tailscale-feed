@@ -12,3 +12,7 @@ config settings 'settings'
     # it to /etc/sysupgrade.conf. Off by default; toggle on from the panel. Conffile,
     # so an existing user's choice is preserved on upgrade; unset is treated as off.
     option keep_on_upgrade '0'
+    # Fail-closed leak protection: drop LAN internet traffic if a selected exit node
+    # goes down instead of leaking it out the WAN. Default on; only takes effect while
+    # an exit node is in use. Set to 0 to disable.
+    option killswitch '1'

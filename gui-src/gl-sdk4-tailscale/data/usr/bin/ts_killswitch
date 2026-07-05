@@ -1,0 +1,47 @@
+#!/bin/sh
+# Vendored from GL 2026 firmware (/usr/bin/ts_killswitch), where it is owned by a
+# separate GL package (not gl-sdk4-tailscale), so we ship our own copy. When an exit
+# node is SELECTED but its tunnel is down, LAN internet traffic would otherwise leak
+# out the WAN; this installs a blackhole rule so it fails closed instead. Active only
+# while using an exit node (exit_node_ip set) and not advertising as one; default on
+# (settings.killswitch != 0). GL's run_exit_node key is remapped to our
+# advertise_exit_node. Called from the rpc handler on set_config and logout.
+
+SECTION="ts_block_lan_leak"
+# refer to route_policy.global.append_source_if for easier adaptation if needed in the future
+IN_IFACE="lan"
+PRIORITY="5280"
+ACTION="blackhole"
+enabled=$(uci -q get tailscale.settings.enabled)
+run_exit_node=$(uci -q get tailscale.settings.advertise_exit_node)
+exit_node_ip=$(uci -q get tailscale.settings.exit_node_ip)
+killswitch=$(uci -q get tailscale.settings.killswitch)
+
+ENABLE="0"
+if [ "$enabled" = "1" ] && [ "$run_exit_node" != "1" ] && [ -n "$exit_node_ip" ] && [ "$killswitch" != "0" ]; then
+    ENABLE="1"
+fi
+
+current_exists=0
+[ "$(uci -q get network.$SECTION)" = "rule" ] && current_exists=1
+
+target_exists="$ENABLE"
+
+if [ "$ENABLE" = "1" ]; then
+    uci -q batch <<EOF
+set network.$SECTION=rule
+set network.$SECTION.in='$IN_IFACE'
+set network.$SECTION.priority='$PRIORITY'
+set network.$SECTION.action='$ACTION'
+EOF
+    uci commit network
+else
+    uci -q delete network.$SECTION
+    uci commit network
+fi
+
+if [ "$current_exists" != "$target_exists" ]; then
+    /etc/init.d/network reload >/dev/null 2>&1
+fi
+
+exit 0
