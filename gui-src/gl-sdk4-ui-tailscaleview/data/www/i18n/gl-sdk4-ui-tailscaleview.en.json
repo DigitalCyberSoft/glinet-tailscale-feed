@@ -20,6 +20,8 @@
         "current_ip_tips": "Tailscale uses the 100.64.0.0/10 subnet, which may conflict with an ISP-assigned address or VPN client address. If your WAN IP or VPN IP is an address within this subnet, disable Tailscale to avoid being unable to network.",
         "custom_exit_node_warning": "If you enable Custom Exit Node, the device will forward all requests to the Exit Node. Before enabling, you must enable subnet routes {subnet} of this device in $$$$Tailscale Admin Console$$$$ for Tailscale to forward client requests; otherwise, your clients will not be able to access the Internet.",
         "dns_warning_tips": "When using an intranet IP address as DNS, you may not be able to access the DNS server.",
+        "keep_on_upgrade_label": "Keep Through Firmware Upgrade",
+        "keep_on_upgrade_tips": "When enabled, the installed Tailscale packages are preserved across a GL firmware upgrade (via /etc/sysupgrade.conf) so they keep overriding the firmware's older bundled version instead of being reverted.",
         "lan_gateway_label": "Allow LAN Devices to Use Tailscale",
         "lan_gateway_tips": "When enabled, devices on the LAN can reach the Tailscale network through this router without installing Tailscale on each device.",
         "advertise_exit_node_label": "Advertise as Exit Node",

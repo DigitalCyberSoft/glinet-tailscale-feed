@@ -20,6 +20,8 @@
         "current_ip_tips": "Tailscale utiliza la subred 100.64.0.0/10, que podría entrar en conflicto con una dirección asignada por el proveedor de servicios de Internet (ISP) o una dirección de cliente VPN. Si la dirección IP de WAN o dirección IP de VPN se encuentra dentro de dicha subred, es necesario desactivar Tailscale para evitar problemas de conectividad en la red.",
         "custom_exit_node_warning": "Si habilita la función Nodo de Salida Personalizado, el dispositivo reenviará todas las solicitudes al Nodo de Salida. Antes de habilitarla sin embargo, debe activar las rutas de subred {subnet} de éste dispositivo en la $$$$Tailscale Admin Console$$$$ de forma que Tailscale pueda reenviar las solicitudes de los clientes; de lo contrario sus clientes no podrán acceder al Internet.",
         "dns_warning_tips": "Cuando se utiliza una dirección IP de la intranet como DNS, es posible que no se pueda acceder al servidor DNS.",
+        "keep_on_upgrade_label": "Mantener tras actualizar el firmware",
+        "keep_on_upgrade_tips": "Si está activado, los paquetes de Tailscale instalados se conservan al actualizar el firmware de GL (mediante /etc/sysupgrade.conf), de modo que sigan reemplazando la versión más antigua incluida en el firmware en lugar de revertirse.",
         "lan_gateway_label": "Permitir que los dispositivos LAN usen Tailscale",
         "lan_gateway_tips": "Si esta opción está activada, los dispositivos de la red local (LAN) pueden acceder a la red Tailscale a través de este router sin instalar Tailscale en cada dispositivo.",
         "advertise_exit_node_label": "Anunciar como nodo de salida",

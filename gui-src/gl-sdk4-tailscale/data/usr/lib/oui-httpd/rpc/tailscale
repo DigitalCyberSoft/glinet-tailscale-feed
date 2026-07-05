@@ -258,6 +258,9 @@ function M.get_config()
     res.exit_node_ip = c:get("tailscale", "settings", "exit_node_ip")
     -- On 4.9+ the panel hides "Advertise as Exit Node" (GL provides it natively).
     res.firmware_49_plus = fw_is_49_plus()
+    -- Panel toggle: preserve the Tailscale stack across a GL firmware upgrade
+    -- (writes /etc/sysupgrade.conf). Unset defaults to on.
+    res.keep_on_upgrade = (c:get("tailscale", "settings", "keep_on_upgrade") or "1") == "1"
 
     if lanip and lanmask then
         local lan_info = lnet.ipcalc({lanip, lanmask})
@@ -322,6 +325,7 @@ function M.set_config(params)
     local lan_enabled = params.lan_enabled
     local lan_gateway = params.lan_gateway
     local advertise_exit_node = params.advertise_exit_node
+    local keep_on_upgrade = params.keep_on_upgrade
     local exit_node_ip = params.exit_node_ip
 
     -- A node cannot advertise an exit node and use one at the same time
@@ -348,6 +352,10 @@ function M.set_config(params)
 
     if not validator.base(advertise_exit_node, "boolean", true) then
         return rpc.ERROR_CODE_INVALID_PARAMS, "invalid advertise_exit_node"
+    end
+
+    if not validator.base(keep_on_upgrade, "boolean", true) then
+        return rpc.ERROR_CODE_INVALID_PARAMS, "invalid keep_on_upgrade"
     end
 
     if exit_node_ip ~= "" and exit_node_ip ~= nil and not validator.ip4addr(exit_node_ip) then
@@ -388,6 +396,14 @@ function M.set_config(params)
         c:set("tailscale", "settings", "advertise_exit_node", 1)
     else
         c:set("tailscale", "settings", "advertise_exit_node", 0)
+    end
+
+    -- nil (older panel that never sends it) leaves the current value untouched;
+    -- the gl_tailscale restart below re-applies the sysupgrade.conf block from it.
+    if keep_on_upgrade == true then
+        c:set("tailscale", "settings", "keep_on_upgrade", 1)
+    elseif keep_on_upgrade == false then
+        c:set("tailscale", "settings", "keep_on_upgrade", 0)
     end
 
     if exit_node_ip then

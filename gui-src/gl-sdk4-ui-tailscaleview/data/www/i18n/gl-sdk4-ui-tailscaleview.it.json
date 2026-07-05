@@ -20,6 +20,8 @@
         "current_ip_tips": "Tailscale usa la sottorete 100.64.0.0/10, che può entrare in conflitto con un indirizzo assegnato dall'ISP o da un Client VPN. Se il tuo indirizzo WAN o l'IP della VPN appartengono a tale sottorete, disabilita Tailscale per evitare di non poter navigare.",
         "custom_exit_node_warning": "Se si abilita il Nodo di Uscita Personalizzato, il dispositivo inoltrerà tutte le richieste al Nodo di Uscita. Prima di abilitare, è necessario abilitare le rotte di subnet {subnet} di questo dispositivo nella $$$$Console di Amministrazione Tailscale$$$$ affinché Tailscale possa inoltrare le richieste dei client; in caso contrario, i vostri client non saranno in grado di accedere a Internet.",
         "dns_warning_tips": "Quando si utilizza un indirizzo IP Intranet come DNS, potrebbe non essere possibile accedere al server DNS.",
+        "keep_on_upgrade_label": "Mantieni dopo l'aggiornamento del firmware",
+        "keep_on_upgrade_tips": "Se abilitato, i pacchetti Tailscale installati vengono conservati durante un aggiornamento del firmware GL (tramite /etc/sysupgrade.conf), così da continuare a sostituire la versione più vecchia inclusa nel firmware invece di essere ripristinati.",
         "lan_gateway_label": "Consenti ai dispositivi LAN di usare Tailscale",
         "lan_gateway_tips": "Se questa opzione è abilitata, i dispositivi nella LAN possono accedere alla rete Tailscale tramite questo router senza installare Tailscale su ciascun dispositivo.",
         "advertise_exit_node_label": "Annuncia come nodo di uscita",

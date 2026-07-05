@@ -8,3 +8,7 @@ config settings 'settings'
     # does not connect to or advertise anything until the user logs in. This is a
     # conffile, so existing users' choice is preserved on upgrade.
     option enabled '1'
+    # Preserve the installed Tailscale stack across a GL firmware upgrade by adding
+    # it to /etc/sysupgrade.conf. Toggle from the panel. Conffile, so an existing
+    # user's choice is preserved on upgrade; unset is treated as on.
+    option keep_on_upgrade '1'

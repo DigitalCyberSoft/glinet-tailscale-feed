@@ -29,6 +29,50 @@ is_fw49_plus() {
     return 1
 }
 
+# Preserve the whole Tailscale stack across a GL firmware upgrade by listing it in
+# /etc/sysupgrade.conf, which is itself a preserved conffile -- so the list survives
+# every future flash, unlike a package /lib/upgrade/keep.d that must be on disk at
+# flash time (the reason tailscaled reverted before). The preserved files shadow
+# GL's older bundled copies in the new overlay, so our version keeps OVERRIDING GL
+# stock, offline, at the same version. Gated on the panel toggle
+# settings.keep_on_upgrade (unset = on). opkg's DB still resets on a flash, so the
+# panel may show GL's version with an "update" prompt until a manual reinstall; the
+# binary that runs is ours regardless. Managed block, rewritten each call.
+apply_keep_on_upgrade() {
+    local su=/etc/sysupgrade.conf keep
+    keep=$(uci -q get tailscale.settings.keep_on_upgrade)
+    [ -z "$keep" ] && keep=1
+    touch "$su"
+    sed -i '/tailscale-keep-BEGIN/,/tailscale-keep-END/d' "$su" 2>/dev/null
+    [ "$keep" = "1" ] || return 0
+    {
+        echo '# tailscale-keep-BEGIN (managed by gl_tailscale; toggle in the Tailscale panel)'
+        for p in \
+            /usr/sbin/tailscaled /usr/sbin/tailscale \
+            /etc/config/tailscale /etc/tailscale/ /etc/firewall.tailscale.sh \
+            /etc/init.d/tailscale /etc/rc.d/S80tailscale \
+            /etc/hotplug.d/iface/19-tailscale-iface /etc/hotplug.d/net/19-tailscale-net \
+            /usr/bin/gl_tailscale /usr/lib/oui-httpd/rpc/tailscale \
+            /www/views/gl-sdk4-ui-tailscaleview.common.js.gz \
+            /www/i18n/gl-sdk4-ui-tailscaleview.de.json \
+            /www/i18n/gl-sdk4-ui-tailscaleview.en.json \
+            /www/i18n/gl-sdk4-ui-tailscaleview.es.json \
+            /www/i18n/gl-sdk4-ui-tailscaleview.it.json \
+            /www/i18n/gl-sdk4-ui-tailscaleview.ja.json \
+            /www/i18n/gl-sdk4-ui-tailscaleview.zh-cn.json \
+            /www/i18n/gl-sdk4-ui-tailscaleview.zh-tw.json \
+            /usr/share/oui/menu.d/tailscaleview.json; do
+            echo "$p"
+        done
+        echo '# tailscale-keep-END'
+    } >> "$su"
+}
+
+if [ "$action" = "keep" ]; then
+    apply_keep_on_upgrade
+    exit 0
+fi
+
 if [ "$action" = "set_route" ];then
     sleep 5
     ip route add 100.64.0.0/10 dev tailscale0
@@ -133,6 +177,7 @@ modify_dns_resolv()
 }
 
 if [ "$action" = "restart" ];then
+    apply_keep_on_upgrade
     for count in `seq 1 10`
     do
         [ $(pgrep -f "tailscaled") ] && break

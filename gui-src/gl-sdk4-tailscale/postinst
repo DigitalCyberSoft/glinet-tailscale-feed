@@ -11,4 +11,10 @@ if [ -x /etc/init.d/tailscale ]; then
     /etc/init.d/tailscale restart 2>/dev/null
 fi
 /etc/init.d/rpcd restart 2>/dev/null
+
+# Preserve the Tailscale stack across firmware upgrades when the panel toggle
+# settings.keep_on_upgrade is on (default on). gl_tailscale writes or removes the
+# managed /etc/sysupgrade.conf block per that flag; see apply_keep_on_upgrade there.
+[ -x /usr/bin/gl_tailscale ] && /usr/bin/gl_tailscale keep 2>/dev/null
+
 exit 0

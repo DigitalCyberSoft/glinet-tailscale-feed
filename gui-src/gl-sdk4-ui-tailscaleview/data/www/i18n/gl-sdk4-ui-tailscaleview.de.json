@@ -20,6 +20,8 @@
         "custom_exit_node_warning": "Wenn Sie den benutzerdefinierten Exit-Knoten aktivieren, wird das Gerät alle Anfragen an den Exit-Knoten weiterleiten. Bevor Sie diese Funktion aktivieren, müssen Sie die Subnetz-Routen {subnet} dieses Geräts im $$$$Tailscale Admin Console$$$$ für Tailscale aktivieren, damit Tailscale die Clientanfragen weiterleiten kann; andernfalls werden Ihre Clients keinen Zugang zum Internet haben.",
         "current_ip_tips": "Taliscale nutzt das 100.64.0.0/10 Netzwerk, welches vielleicht mit den zugewiesenen Adressen des Internetanbieters oder des VPN Client in Konflikt steht. Wenn das WAN oder VPN Adressen aus diesem Raum benutzt, deaktiviere Taliscale, um zu verhindern dass das Internet oder VPN nicht erreichbar ist.",
         "dns_warning_tips": "Wenn eine LAN IP Adresse als DNS Server genutzt wird, kann der DNS Server vielleicht nicht erreicht werden.",
+        "keep_on_upgrade_label": "Bei Firmware-Upgrade beibehalten",
+        "keep_on_upgrade_tips": "Wenn aktiviert, werden die installierten Tailscale-Pakete bei einem GL-Firmware-Upgrade beibehalten (über /etc/sysupgrade.conf), sodass sie weiterhin die ältere, in der Firmware enthaltene Version überschreiben und nicht zurückgesetzt werden.",
         "lan_gateway_label": "LAN-Geräten Zugriff auf Tailscale erlauben",
         "lan_gateway_tips": "Wenn diese Option aktiviert ist, können Geräte im LAN über diesen Router auf das Tailscale-Netzwerk zugreifen, ohne selbst Tailscale zu installieren.",
         "advertise_exit_node_label": "Als Ausgangspunkt anbieten",

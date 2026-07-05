@@ -1,0 +1,7 @@
+#!/bin/sh
+# On removal, drop the managed /etc/sysupgrade.conf block so it no longer lists
+# files this package owned. Guarded against the offline image root (sysupgrade.conf
+# there is not the live one). Leaves any unrelated user lines intact.
+[ -n "$IPKG_INSTROOT" ] && exit 0
+sed -i '/tailscale-keep-BEGIN/,/tailscale-keep-END/d' /etc/sysupgrade.conf 2>/dev/null
+exit 0

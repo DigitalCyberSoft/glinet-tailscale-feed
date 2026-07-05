@@ -20,6 +20,8 @@
         "current_ip_tips": "Tailscale 使用 100.64.0.0/10 子网，这可能和 ISP 分配的地址或 VPN 客户端地址冲突。若您的 WAN IP 或 VPN 使用了此子网内地址，请禁用 Tailscale。",
         "custom_exit_node_warning": "如果您启用自定义出口节点，设备将把所有请求转发至出口节点。在启用之前，您必须在$$$$Tailscale管理控制台$$$$中启用此设备的子网路由{subnet}，以便Tailscale转发客户端请求；否则，您的客户端将无法访问互联网。",
         "dns_warning_tips": "使用内网 IP 地址作为 DNS 时，您可能会无法访问 DNS 服务器。",
+        "keep_on_upgrade_label": "固件升级后保留",
+        "keep_on_upgrade_tips": "启用后，已安装的 Tailscale 软件包将在 GL 固件升级后保留（通过 /etc/sysupgrade.conf），从而继续覆盖固件自带的旧版本，而不会被还原。",
         "lan_gateway_label": "允许 LAN 设备使用 Tailscale",
         "lan_gateway_tips": "若此选项启用，LAN 内的设备无需自行安装 Tailscale，即可通过本路由器访问 Tailscale 虚拟网络。",
         "advertise_exit_node_label": "宣告为出口节点",
