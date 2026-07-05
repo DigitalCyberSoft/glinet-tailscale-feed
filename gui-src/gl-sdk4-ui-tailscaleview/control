@@ -1,0 +1,10 @@
+Package: gl-sdk4-ui-tailscaleview
+Version: git-2025.244.27716-e9a0fdd-6
+Depends: libc, gl-sdk4-tailscale, gl-sdk4-ui-core
+Source: feeds/glinet/gl-ui4.0/module/tailscaleview
+SourceName: gl-sdk4-ui-tailscaleview
+Section: base
+SourceDateEpoch: 1756712516
+Architecture: all
+Installed-Size: 16446
+Description:  gl-sdk4-ui-tailscaleview

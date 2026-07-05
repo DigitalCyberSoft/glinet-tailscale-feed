@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if [ "$INTERFACE" = "tailscale0" ] && [ "$ACTION" = "add" ];then
+    /usr/bin/gl_tailscale  set_route &
+fi

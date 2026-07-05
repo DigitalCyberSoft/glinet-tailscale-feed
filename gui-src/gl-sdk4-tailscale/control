@@ -1,0 +1,10 @@
+Package: gl-sdk4-tailscale
+Version: git-2025.115.15781-4b8df63-7
+Depends: libc, coreutils, coreutils-timeout, tailscale, libuci-lua
+Source: feeds/glinet/gl-sdk4-tailscale
+SourceName: gl-sdk4-tailscale
+Section: base
+SourceDateEpoch: 1745554981
+Architecture: all
+Installed-Size: 6328
+Description:  TAILSCALE Info API for Gl.inet

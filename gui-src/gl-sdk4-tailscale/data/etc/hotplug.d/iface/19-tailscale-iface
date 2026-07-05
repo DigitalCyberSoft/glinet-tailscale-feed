@@ -1,0 +1,11 @@
+#!/bin/sh
+
+enabled=$(uci -q get tailscale.settings.enabled)
+
+if [ "$ACTION" = "ifup" ] && [ "$enabled" = "1" ]; then
+    [ "$INTERFACE" = "loopback" ] && exit 0
+    /usr/bin/gl_tailscale restart &
+elif [ "$enabled" = "0" ]; then
+    /etc/init.d/tailscale stop &
+fi
+

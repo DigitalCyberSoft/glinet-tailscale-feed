@@ -1,0 +1,17 @@
+{
+    "index": 102,
+    "view": "tailscaleview",
+    "title": "Tailscale",
+    "level": 2,
+    "parent": "applications",
+    "parent_icon": "application",
+    "parent_index": 50,
+    "show_mode": [
+        "router"
+    ],
+    "disables": [
+        "portal",
+        "sdwan",
+        "taps2s"
+    ]
+}

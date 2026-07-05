@@ -1,0 +1,246 @@
+#!/bin/sh
+
+. /lib/functions/gl_util.sh
+
+action="$1"
+TS_POLICY_ROUTE=/tmp/ts_policy_route
+TS_FIREWALL_SECTION=gltailscale
+TAILSCALE_ROUTE_TABLE=52
+TAILSCALE_DNS_SERVER="100.100.100.100"
+
+# Older GL firmwares (e.g. GL-E750 4.3.26) don't ship the `ipcalc_network`
+# helper that newer builds provide, and no package on-device owns it. Stock
+# /bin/ipcalc.sh emits the same NETWORK=/PREFIX= lines this script parses, so
+# fall back to it when ipcalc_network is absent. Without this, the LAN/WAN
+# subnet CIDRs computed below come out empty and the panel's "Allow Remote
+# Access LAN/WAN" toggles advertise no routes at all.
+command -v ipcalc_network >/dev/null 2>&1 || ipcalc_network() { ipcalc.sh "$@"; }
+
+if [ "$action" = "set_route" ];then
+    sleep 5
+    ip route add 100.64.0.0/10 dev tailscale0
+fi
+
+add_policy_route()
+{
+    target=$1
+    if [ -n "$target" ]; then
+        route_param="to $target table main"
+        /sbin/ip rule add $route_param
+        echo $route_param >> $TS_POLICY_ROUTE
+    fi
+}
+
+del_policy_route()
+{
+    /sbin/ip rule del to $TAILSCALE_DNS_SERVER lookup $TAILSCALE_ROUTE_TABLE pri 50
+    if [ -f $TS_POLICY_ROUTE ]; then
+        while read line; do
+            if [ -n "$line" ]; then
+                /sbin/ip rule del $line
+            fi
+        done < $TS_POLICY_ROUTE
+        rm $TS_POLICY_ROUTE
+    fi
+}
+
+add_guest_policy_route()
+{
+    guest_disable=$(uci -q get network.guest.disabled)
+    exit_node_ip=$(uci -q get tailscale.settings.exit_node_ip)
+    if [ -n "$exit_node_ip" ] && [ "$guest_disable" = "0" ]; then
+        guestip=$(ubus call network.interface.guest status|jsonfilter -e '@["ipv4-address"][0].address')
+        guestmask=$(ubus call network.interface.guest status|jsonfilter -e '@["ipv4-address"][0].mask')
+        if [ -n "$guestip" ] && [ -n "$guestmask" ] ;then
+            guest_network=$(ipcalc_network $guestip $guestmask | awk -F= '/NETWORK/{print $2}')
+            guest_mask=$(ipcalc_network $guestip $guestmask | awk -F= '/PREFIX/{print $2}')
+        fi
+
+        if [ -n "$guest_network" ] && [ -n "$guest_mask" ]; then
+            guest_ip="$guest_network/$guest_mask"
+            policy_route_param="from $guest_ip table main"
+            /sbin/ip rule add $policy_route_param
+            echo $policy_route_param >> $TS_POLICY_ROUTE
+        fi
+    fi
+}
+
+add_exit_node_rule()
+{
+    count=0
+    while [ $count -le 5 ]
+    do
+        rule_exist=$(ip rule | grep "from all fwmark 0x80000/0x80000 lookup")
+        ts_prio=$(ip rule | grep "from all lookup 52" |  awk -F':' '{print $1}' | head -n 1)
+        if [ "$rule_exist" = "" ]; then
+            if [ -n "$ts_prio" ]; then
+                pre_prio=$(($ts_prio-1))
+                policy_route_param="from all fwmark 0x80000/0x80000 lookup main prio $pre_prio"
+                /sbin/ip rule add $policy_route_param
+                echo $policy_route_param >> $TS_POLICY_ROUTE
+            fi
+        else
+            break
+        fi
+        count=$(($count+1))
+        sleep 1
+    done
+}
+
+add_ts_fw_rule()
+{
+    if [ -f /etc/firewall.tailscale.sh ]; then
+        /etc/firewall.tailscale.sh &
+    fi
+}
+
+modify_dns_resolv()
+{
+    dns_suffix=$(timeout 2 tailscale status -json | jsonfilter -e '@.MagicDNSSuffix')
+    rule_exist=$(grep "ts.net/100.100.100.100" /etc/dnsmasq.conf)
+    domain_orig=$(uci get dhcp.@dnsmasq[0].domain)
+    domain_orig_clean=$(echo "$domain_orig" | sed "s/.*ts.net //g")
+
+    if [ "$1" = "1" ]; then
+        if [ "$rule_exist" = "" ]; then
+            [ "$dns_suffix" = "" ] && dns_suffix="ts.net"
+            echo "server=/$dns_suffix/100.100.100.100" >> /etc/dnsmasq.conf
+            uci set dhcp.@dnsmasq[0].domain="$dns_suffix $domain_orig_clean"
+            uci commit dhcp
+            /etc/init.d/dnsmasq restart
+        fi
+    else
+        uci set dhcp.@dnsmasq[0].domain="$domain_orig_clean"
+        uci commit dhcp
+        if [ -n "$rule_exist" ]; then
+            sed -i '/ts\.net\/100\.100\.100\.100/d' /etc/dnsmasq.conf
+            /etc/init.d/dnsmasq restart
+        fi
+    fi
+}
+
+if [ "$action" = "restart" ];then
+    for count in `seq 1 10`
+    do
+        [ $(pgrep -f "tailscaled") ] && break
+        sleep 1
+    done
+
+    /etc/init.d/tailscale restart
+
+    del_policy_route
+    add_ts_fw_rule
+
+    sys_mode=$(uci -q get glconfig.general.mode)
+    if [ "$sys_mode" != "router" ]; then
+        /etc/init.d/tailscale stop
+        modify_dns_resolv 0
+        exit 0
+    fi
+
+    enabled=$(uci -q get tailscale.settings.enabled)
+    if [ "$enabled" = "1" ]; then
+        /sbin/ip rule add to $TAILSCALE_DNS_SERVER lookup $TAILSCALE_ROUTE_TABLE pri 50
+
+        wanip=$(ubus call network.interface.wan status|jsonfilter -e '@["ipv4-address"][0].address')
+        wanmask=$(ubus call network.interface.wan status|jsonfilter -e '@["ipv4-address"][0].mask')
+        if [ -n "$wanip" ] && [ -n "$wanmask" ] ;then
+            wan_network=$(ipcalc_network $wanip $wanmask | awk -F= '/NETWORK/{print $2}')
+            wan_mask=$(ipcalc_network $wanip $wanmask | awk -F= '/PREFIX/{print $2}')
+        fi
+        [ -n "$wan_network" -a -n "$wan_mask" ] && wan_ip="$wan_network/$wan_mask"
+
+        secondwanip=$(ubus call network.interface.secondwan status|jsonfilter -e '@["ipv4-address"][0].address')
+        secondwanmask=$(ubus call network.interface.secondwan status|jsonfilter -e '@["ipv4-address"][0].mask')
+        if [ -n "$secondwanip" ] && [ -n "$secondwanmask" ] ;then
+            secondwan_network=$(ipcalc_network $secondwanip $secondwanmask | awk -F= '/NETWORK/{print $2}')
+            secondwan_mask=$(ipcalc_network $secondwanip $secondwanmask | awk -F= '/PREFIX/{print $2}')
+        fi
+        [ -n "$secondwan_network" -a -n "$secondwan_mask" ] && secondwan_ip="$secondwan_network/$secondwan_mask"
+
+        wwanip=$(ubus call network.interface.wwan status|jsonfilter -e '@["ipv4-address"][0].address')
+        wwanmask=$(ubus call network.interface.wwan status|jsonfilter -e '@["ipv4-address"][0].mask')
+        if [ -n "$wwanip" ] && [ -n "$wwanmask" ] ;then
+            wwan_network=$(ipcalc_network $wwanip $wwanmask | awk -F= '/NETWORK/{print $2}')
+            wwan_mask=$(ipcalc_network $wwanip $wwanmask | awk -F= '/PREFIX/{print $2}')
+        fi
+        [ -n "$wwan_network" -a -n "$wwan_mask" ] && wwan_ip="$wwan_network/$wwan_mask"
+
+        tetheringip=$(ubus call network.interface.tethering status|jsonfilter -e '@["ipv4-address"][0].address')
+        tetheringmask=$(ubus call network.interface.tethering status|jsonfilter -e '@["ipv4-address"][0].mask')
+        if [ -n "$tetheringip" ] && [ -n "$tetheringmask" ] ;then
+            tethering_network=$(ipcalc_network $tetheringip $tetheringmask | awk -F= '/NETWORK/{print $2}')
+            tethering_mask=$(ipcalc_network $tetheringip $tetheringmask | awk -F= '/PREFIX/{print $2}')
+        fi
+        [ -n "$tethering_network" -a -n "$tethering_mask" ] && tethering_ip="$tethering_network/$tethering_mask"
+
+        lanip=$(uci -q get network.lan.ipaddr)
+        lanmask="$(uci -q get network.lan.netmask)"
+        lan_network=$(ipcalc_network $lanip $lanmask | awk -F= '/NETWORK/{print $2}')
+        lan_mask=$(ipcalc_network $lanip $lanmask | awk -F= '/PREFIX/{print $2}')
+        [ -n "$lan_network" -a -n "$lan_mask" ] && lan_ip="$lan_network/$lan_mask"
+
+        exit_node_ip=$(uci -q get tailscale.settings.exit_node_ip)
+        [ -n "$exit_node_ip" ] && lan_enabled="1" || lan_enabled=$(uci -q get tailscale.settings.lan_enabled)
+        [ -n "$exit_node_ip" ] && wan_enabled="1" || wan_enabled=$(uci -q get tailscale.settings.wan_enabled)
+        
+        if [ "$lan_enabled" = "1" ]; then
+            if [ -n "$lan_ip" ]; then
+                [ -n "$routes" ] && routes="$routes,$lan_ip" || routes="$lan_ip"
+            fi
+        fi
+
+        if [ "$wan_enabled" = "1" ]; then
+            if [ -n "$wan_ip" ]; then
+                [ -n "$routes" ] && routes="$routes,$wan_ip" || routes="$wan_ip"
+            fi
+
+            if [ -n "$wwan_ip" ]; then
+                [ -n "$routes" ] && routes="$routes,$wwan_ip" || routes="$wwan_ip"
+            fi
+
+            if [ -n "$secondwan_ip" ]; then
+                [ -n "$routes" ] && routes="$routes,$secondwan_ip" || routes="$secondwan_ip"
+            fi
+
+            if [ -n "$tethering_ip" ]; then
+                [ -n "$routes" ] && routes="$routes,$tethering_ip" || routes="$tethering_ip"
+            fi
+        fi
+
+        if [ -n "$routes" ]; then
+            param="--advertise-routes=$routes"
+        else
+            param=""
+        fi
+        
+        if [ -n "$exit_node_ip" ];then
+            add_exit_node_rule
+            param="$param --exit-node-allow-lan-access --exit-node=$exit_node_ip"
+        elif [ "$(uci -q get tailscale.settings.advertise_exit_node)" = "1" ]; then
+            # Advertise this device AS an exit node (offers 0.0.0.0/0 + ::/0 to the
+            # tailnet). Mutually exclusive with using an exit node above (tailscale
+            # rejects both). Needs approval in the Tailscale admin console, and the
+            # tailscale0->wan firewall forwarding (see firewall.tailscale.sh).
+            param="$param --advertise-exit-node"
+        fi
+
+        [ -n "$lan_ip" ] && add_policy_route $lan_ip
+
+        [ -n "$wan_ip" ] && add_policy_route $wan_ip
+
+        [ -n "$secondwan_ip" ] && add_policy_route $secondwan_ip
+
+        [ -n "$wwan_ip" ] && add_policy_route $wwan_ip
+
+        [ -n "$tethering_ip" ] && add_policy_route $tethering_ip
+
+        add_guest_policy_route
+        
+        timeout 10 /usr/sbin/tailscale up --reset --accept-routes $param --timeout 3s --accept-dns=false > /dev/null
+    else
+        /etc/init.d/tailscale stop
+    fi
+
+    modify_dns_resolv $enabled
+fi

@@ -1,0 +1,28 @@
+{
+    "tailscale": {
+        "enable_wan_label": "允許遠程訪問WAN",
+        "allow_lan_tips": "如果啟用此選項，將允許通過 Tailscale 虛擬網絡訪問設備 LAN 內的資源。",
+        "allow_wan_tips": "若此選項啟用，本設備 WAN 側的資源將允許通過 Tailscale 虛擬網路訪問。",
+        "need_login_tips": "Tailscale 服務已啟用，但尚未綁定設備。請使用 $$$$設備綁定連結$$$$ 將此設備綁定到您的 Tailscale 帳戶。",
+        "ready_tips": "設備已連接到您的 Tailscale 虛擬網路。",
+        "enable_lan_label": "允許遠程訪問 LAN",
+        "logout_btn": "解除綁定",
+        "current_ip_label": "路由器虛擬 IP",
+        "get_url_err_msg": "獲取設備綁定連結失敗。",
+        "desc": "$$$$Tailscale$$$$ 讓您可以在任何地點安全且便捷的訪問您的設備。它使用加密的點對點連接以確保只有你的私人網路上的設備可以相互通信。您可以用它來遠端存取您的設備或區域網路。",
+        "need_mandate_tips": "此設備已綁定至 Tailscale 帳戶，但尚未獲得訪問網絡的授權。請前往$$$$Tailscale管理控制台$$$$授權該設備連接至您的虛擬網絡。如果這不是您的帳戶，請先解除綁定。",
+        "enable_lan_tips": "設備已允許 Tailscale 用戶端訪問 WAN 側或 LAN 側的資源。但您需要在 $$$$Tailscale Admin Console$$$$ 中編輯路由設置，用戶端的請求才會被 Tailscale 虛擬網路轉發到設備。",
+        "account_label": "綁定賬號",
+        "exit_node_tips": "如果您選擇的出口節點不可用或無法訪問互聯網，設備將無法將設置同步到 Tailscale。",
+        "manual_node_label": "自定義出口節點",
+        "custom_exit_node_tips": "如果啟用此選項，設備將所有請求都轉發至退出節點。在啟用之前，您需要在$$$$Tailscale管理控制台$$$$中啟用此設備的子網路路由{subnet}，以便Tailscale轉發客戶端請求；否則，您的客戶端將無法訪問互聯網。",
+        "exit_node_label": "出口節點",
+        "current_ip_tips": "Tailscale 使用 100.64.0.0/10 子網，這可能和 ISP 分配的地址或 VPN 客戶端地址衝突。若您的 WAN IP 或 VPN 使用了此子網內地址，請禁用 Tailscale。",
+        "custom_exit_node_warning": "如果您啟用自定義出口節點，設備將把所有請求轉發至出口節點。在啟用之前，您必須在$$$$Tailscale管理控制臺$$$$中啟用此設備的子網路由{subnet}，以便Tailscale轉發客戶端請求；否則，您的客戶端將無法訪問互聯網。",
+        "dns_warning_tips": "使用內網IP位址作為DNS時，可能無法訪問DNS伺服器。",
+        "lan_gateway_label": "允許 LAN 設備使用 Tailscale",
+        "lan_gateway_tips": "如果啟用此選項，LAN 內的設備無需自行安裝 Tailscale，即可通過本路由器訪問 Tailscale 虛擬網絡。",
+        "advertise_exit_node_label": "宣告為出口節點",
+        "advertise_exit_node_tips": "如果啟用此選項，本路由器將作為 Tailscale 出口節點，為 tailnet 內的設備轉發互聯網流量。需在 Tailscale 管理控制台中批准。不能與上方選擇出口節點同時使用。"
+    }
+}
