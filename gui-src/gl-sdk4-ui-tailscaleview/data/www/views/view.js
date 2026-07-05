@@ -773,6 +773,11 @@ module.exports = function(t) {
         },
         getNodeList: function() {
           return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "get_exit_node_list", {}])
+        },
+        setBinary: function(t) {
+          return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "set_binary", {
+            source: t
+          }])
         }
       };
     var l = r,
@@ -784,6 +789,8 @@ module.exports = function(t) {
           address_v4: "",
           lan_ip: "",
           dns: [],
+          binary_source: "feed",
+          binary_present: !0,
           config: {
             enabled: !1,
             lan_enabled: !1,
@@ -859,6 +866,17 @@ module.exports = function(t) {
             };
             this.setTailscaleConfig(t)
           },
+          handleSetBinary(t) {
+            this.$message.closeAll(), this.$message({
+              message: this.$t("msg.being_process"),
+              iconClass: "iconfont icon-loading",
+              duration: 0
+            }), this.changeShowDisableMask(!0), l.setBinary(t).then((t => {
+              this.changeShowDisableMask(!1), this.$message.closeAll(), t && t.err_msg ? this.$message.error(t.err_code + ", " + t.err_msg) : (this.$message.success(this.$t("msg.success")), this.getConfig())
+            }), (() => {
+              this.changeShowDisableMask(!1), this.$message.closeAll()
+            }))
+          },
           setTailscaleConfig(t) {
             this.$message.closeAll(), this.$message({
               message: this.$t("msg.being_process"),
@@ -897,7 +915,7 @@ module.exports = function(t) {
           },
           getConfig() {
             l.getTailscaleConfig().then((t => {
-              t && t.err_msg || (this.config.enabled = t.enabled || !1, this.config.lan_enabled = t.lan_enabled || !1, this.config.wan_enabled = t.wan_enabled || !1, this.config.lan_gateway = t.lan_gateway || !1, this.config.advertise_exit_node = t.advertise_exit_node || !1, this.config.keep_on_upgrade = t.keep_on_upgrade || !1, this.config.killswitch = t.killswitch !== !1, this.config.exit_node_ip = t.exit_node_ip || "", this.config.manual = "" !== this.config.exit_node_ip, this.lan_ip = t.lan_ip || "", this.oldConfig = this.$deepCopy(this.config), t.enabled ? (this.getStatusTimeout(0), this.getNodeList(!1)) : clearTimeout(this.getStatusTimeId))
+              t && t.err_msg || (this.config.enabled = t.enabled || !1, this.config.lan_enabled = t.lan_enabled || !1, this.config.wan_enabled = t.wan_enabled || !1, this.config.lan_gateway = t.lan_gateway || !1, this.config.advertise_exit_node = t.advertise_exit_node || !1, this.config.keep_on_upgrade = t.keep_on_upgrade || !1, this.config.killswitch = t.killswitch !== !1, this.config.exit_node_ip = t.exit_node_ip || "", this.config.manual = "" !== this.config.exit_node_ip, this.binary_source = t.binary_source || "feed", this.binary_present = t.binary_present !== !1, this.lan_ip = t.lan_ip || "", this.oldConfig = this.$deepCopy(this.config), t.enabled ? (this.getStatusTimeout(0), this.getNodeList(!1)) : clearTimeout(this.getStatusTimeId))
             }))
           },
           getStatus() {
@@ -1005,7 +1023,25 @@ module.exports = function(t) {
           }
         }, [t._v(" " + t._s(t.$t("tailscale.enable_lan_tips").split("$$$$")[1]) + " ")])]), t._v(" " + t._s(t.$t("tailscale.enable_lan_tips").split("$$$$")[2]) + " ")], 1) : e("p", [t._v(" " + t._s(t.$t("tailscale.ready_tips")) + " ")])]] : t._e()], 2) : t._e(), e("ul", {
           staticClass: "tailscale-config"
-        }, [e("li", [e("div", [t._v(t._s(t.$t("core.enable")) + " Tailscale")]), e("div", [e("gl-switch", {
+        }, [e("li", [e("div", [t._v(" " + t._s(t.$t("tailscale.binary_source_label")) + " "), e("el-tooltip", {
+          attrs: {
+            content: t.$t("tailscale.binary_source_tips"),
+            placement: "top"
+          }
+        }, [e("span", {
+          staticClass: "iconfont icon-info"
+        })])], 1), e("div", [e("gl-switch", {
+          attrs: {
+            size: "small"
+          },
+          model: {
+            value: "admonstrator" === t.binary_source,
+            callback: function(e) {
+              t.handleSetBinary(e ? "admonstrator" : "feed")
+            },
+            expression: "binary_source === 'admonstrator'"
+          }
+        })], 1)]), t.binary_present ? t._e() : e("li", [e("div", [t._v(" " + t._s(t.$t("tailscale.binary_missing_tips")) + " ")])]), e("li", [e("div", [t._v(t._s(t.$t("core.enable")) + " Tailscale")]), e("div", [e("gl-switch", {
           attrs: {
             size: "small"
           },
