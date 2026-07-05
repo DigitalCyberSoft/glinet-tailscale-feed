@@ -6,5 +6,6 @@
 /etc/hotplug.d/net/19-tailscale-net
 /usr/bin/gl_tailscale
 /usr/bin/ts_killswitch
+/usr/bin/ts-admon-update
 /usr/lib/oui-httpd/rpc/tailscale
 /etc/rc.d/S80tailscale

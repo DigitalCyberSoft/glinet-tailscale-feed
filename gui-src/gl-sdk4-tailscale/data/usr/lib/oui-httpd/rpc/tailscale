@@ -248,6 +248,11 @@ function M.get_config()
     -- Leak-protection killswitch (blackhole LAN if a selected exit node drops).
     -- Default on: only off when explicitly set to "0".
     res.killswitch = c:get("tailscale", "settings", "killswitch") ~= "0"
+    -- tailscaled binary source: 'feed' (opkg package) or 'admonstrator'
+    -- (ts-admon-update), plus whether any binary is actually installed (the glue no
+    -- longer forces one, so the panel can warn when neither source is present).
+    res.binary_source = c:get("tailscale", "settings", "binary_source") or "feed"
+    res.binary_present = fs.access("/usr/sbin/tailscaled")
 
     if lanip and lanmask then
         local lan_info = lnet.ipcalc({lanip, lanmask})
@@ -459,6 +464,35 @@ function M.logout()
         os.remove(state_file)
     end
     fs.sync()
+end
+
+--[[
+    @method-type: call
+    @method-name: set_binary
+    @method-desc: Choose the tailscaled binary source and (re)install if needed
+
+    @in  string   source   'feed' (opkg package) or 'admonstrator' (fetch tiny build)
+    @out number   ?err_code
+    @out string   ?err_msg
+--]]
+function M.set_binary(params)
+    local source = params.source
+    if source ~= "feed" and source ~= "admonstrator" then
+        return rpc.ERROR_CODE_INVALID_PARAMS, "invalid source"
+    end
+
+    local c = uci.cursor()
+    c:set("tailscale", "settings", "binary_source", source)
+    c:commit("tailscale")
+    fs.sync()
+
+    if source == "admonstrator" then
+        -- fetch Admonstrator's build; the script sets its own uci + persistence
+        local r = ngx.pipe.spawn({"/usr/bin/ts-admon-update"})
+        if r then r:wait() end
+    end
+    -- 'feed' only records the preference; the feed binary is installed via opkg.
+    ngx.pipe.spawn({"/usr/bin/gl_tailscale", "restart"})
 end
 
 return M

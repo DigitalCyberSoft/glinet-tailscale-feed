@@ -39,7 +39,7 @@ apply_keep_on_upgrade() {
             /etc/config/tailscale /etc/tailscale/ /etc/firewall.tailscale.sh \
             /etc/init.d/tailscale /etc/rc.d/S80tailscale \
             /etc/hotplug.d/iface/19-tailscale-iface /etc/hotplug.d/net/19-tailscale-net \
-            /usr/bin/gl_tailscale /usr/bin/ts_killswitch /usr/lib/oui-httpd/rpc/tailscale \
+            /usr/bin/gl_tailscale /usr/bin/ts_killswitch /usr/bin/ts-admon-update /usr/lib/oui-httpd/rpc/tailscale \
             /www/views/gl-sdk4-ui-tailscaleview.common.js.gz \
             /www/i18n/gl-sdk4-ui-tailscaleview.de.json \
             /www/i18n/gl-sdk4-ui-tailscaleview.en.json \
@@ -232,6 +232,15 @@ modify_dns_resolv()
 
 if [ "$action" = "restart" ];then
     apply_keep_on_upgrade
+
+    # Gate on a tailscaled binary being present (this feed's opkg package OR the
+    # Admonstrator build via ts-admon-update). The glue no longer Depends on the
+    # opkg binary, so with neither installed there is nothing to start.
+    if [ ! -x /usr/sbin/tailscaled ]; then
+        logger -t tailscale "gl_tailscale: no tailscaled binary (feed or Admonstrator); nothing to start"
+        exit 0
+    fi
+
     for count in `seq 1 10`
     do
         [ $(pgrep -f "tailscaled") ] && break

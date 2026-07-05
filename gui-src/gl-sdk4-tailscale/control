@@ -1,6 +1,6 @@
 Package: gl-sdk4-tailscale
-Version: 1:1.1.1-1
-Depends: libc, coreutils, coreutils-timeout, tailscale, libuci-lua
+Version: 1:1.2.0-1
+Depends: libc, coreutils, coreutils-timeout, libuci-lua
 Source: feeds/glinet/gl-sdk4-tailscale
 SourceName: gl-sdk4-tailscale
 Section: base

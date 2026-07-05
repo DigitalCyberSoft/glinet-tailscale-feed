@@ -1,0 +1,50 @@
+#!/bin/sh
+# Fetch the Tailscale binary the "Admonstrator" way -- their smaller "tiny" build
+# from github.com/Admonstrator/glinet-tailscale-updater -- as an ALTERNATIVE to this
+# feed's opkg `tailscale` binary. Lets a user pick "theirs or ours" for tailscaled.
+#
+# Adapted from Admonstrator/glinet-tailscale-updater/update-tailscale.sh
+#   MIT License, Copyright (c) 2024 Aaron Viehl
+# Reduced to the binary-fetch path only: the GL panel + gl_tailscale integration is
+# this project's own, so their gl_tailscale/SSH patching is intentionally omitted.
+set -e
+
+TINY_URL="https://github.com/Admonstrator/glinet-tailscale-updater/releases/latest/download"
+
+# arch -> Admonstrator "tiny" build suffix (mirrors their uname-m + DISTRIB_ARCH logic)
+ARCH=$(uname -m)
+case "$ARCH" in
+    aarch64) TA=arm64 ;;
+    armv7l)  TA=arm ;;
+    x86_64)  TA=amd64 ;;
+    mips|mipsel)
+        MA=$(sed -n "s/^DISTRIB_ARCH='\(.*\)_.*'\$/\1/p" /etc/openwrt_release 2>/dev/null)
+        case "$MA" in mipsel|mips_24kc) TA=mipsle ;; *) TA=mips ;; esac ;;
+    *) echo "ts-admon-update: unsupported architecture '$ARCH'" >&2; exit 1 ;;
+esac
+
+command -v wget >/dev/null 2>&1 || { echo "ts-admon-update: wget is required" >&2; exit 1; }
+
+echo "ts-admon-update: downloading tailscaled-linux-$TA from Admonstrator releases..."
+if ! wget -q -O /tmp/tailscaled-admon "$TINY_URL/tailscaled-linux-$TA" || [ ! -s /tmp/tailscaled-admon ]; then
+    rm -f /tmp/tailscaled-admon
+    echo "ts-admon-update: download failed (network/DNS or no build for $TA)" >&2
+    exit 1
+fi
+
+# stop the daemon, swap the binary in, restore. The tiny build is a combined
+# tailscaled+CLI, so /usr/sbin/tailscale is a symlink to it (argv0 dispatch).
+/etc/init.d/tailscale stop 2>/dev/null || true
+install -m0755 /tmp/tailscaled-admon /usr/sbin/tailscaled
+ln -sf tailscaled /usr/sbin/tailscale
+rm -f /tmp/tailscaled-admon
+
+uci -q set tailscale.settings.binary_source=admonstrator
+# This binary is NOT opkg-managed, so it would be wiped by a firmware flash. Turn on
+# keep_on_upgrade (writes /etc/sysupgrade.conf) so it persists.
+uci -q set tailscale.settings.keep_on_upgrade=1
+uci -q commit tailscale
+[ -x /usr/bin/gl_tailscale ] && /usr/bin/gl_tailscale keep 2>/dev/null
+
+echo "ts-admon-update: installed $(/usr/sbin/tailscale --version 2>/dev/null | head -1). Enable Tailscale in the panel to start it."
+exit 0

@@ -16,3 +16,7 @@ config settings 'settings'
     # goes down instead of leaking it out the WAN. Default on; only takes effect while
     # an exit node is in use. Set to 0 to disable.
     option killswitch '1'
+    # Which tailscaled binary to use: 'feed' = this opkg feed's `tailscale` package;
+    # 'admonstrator' = the smaller build fetched by ts-admon-update. The glue no
+    # longer Depends on the feed binary, so either source (or neither) is valid.
+    option binary_source 'feed'

@@ -18,6 +18,14 @@ start_service() {
   config_get port "settings" port 41641
   config_get state_file "settings" state_file /etc/tailscale/tailscaled.state
 
+  # Gate on a tailscaled binary being present (this feed's opkg package OR the
+  # Admonstrator build). The glue no longer Depends on the opkg binary, so with
+  # neither installed, fail gracefully instead of respawning procd forever.
+  if [ ! -x /usr/sbin/tailscaled ]; then
+    logger -t tailscale "no tailscaled binary installed (feed or Admonstrator); not starting"
+    return 0
+  fi
+
   /usr/sbin/tailscaled --cleanup 2>/dev/null
 
   config_get enabled "settings" enabled 0
@@ -44,5 +52,5 @@ start_service() {
 }
 
 stop_service() {
-  /usr/sbin/tailscaled --cleanup
+  [ -x /usr/sbin/tailscaled ] && /usr/sbin/tailscaled --cleanup
 }
