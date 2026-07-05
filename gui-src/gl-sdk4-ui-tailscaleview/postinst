@@ -1,0 +1,13 @@
+#!/bin/sh
+# opkg just replaced the panel bundle (.common.js.gz) with a pristine copy, which
+# silently drops any extension that patches it -- notably the Mullvad exit-node
+# picker (gl-sdk4-tailscale-mullvad), which would otherwise stay gone until the
+# next reboot. Reapply its patch if that extension is installed. patch-view.lua is
+# idempotent (no-ops if already applied) and fails closed (leaves the bundle stock
+# if the new version's anchors don't match), so this is safe and best-effort: a
+# patch hiccup must not fail this package's own install, hence `|| true`.
+[ -n "$IPKG_INSTROOT" ] && exit 0
+if [ -f /usr/libexec/tailscale-mullvad/patch-view.lua ]; then
+    lua /usr/libexec/tailscale-mullvad/patch-view.lua apply 2>/dev/null || true
+fi
+exit 0
