@@ -8,6 +8,8 @@ after GL.iNet stopped shipping it.
 
 Built for **seven** GL architectures (see the table below); GL-E750/E750V2 = QCA9533 / ath79 / `mips_24kc`.
 
+![GL.iNet admin panel: Tailscale page, showing the restored panel plus the "Allow LAN Devices to Use Tailscale" and "Advertise as Exit Node" toggles this feed adds.](glinet-tailscale-panel.png)
+
 ## Packages
 
 | Package | Version | Download | Purpose |
