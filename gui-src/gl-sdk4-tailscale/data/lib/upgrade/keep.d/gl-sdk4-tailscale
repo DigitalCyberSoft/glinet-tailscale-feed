@@ -1,1 +1,8 @@
+/etc/config/tailscale
 /etc/tailscale/
+/etc/firewall.tailscale.sh
+/etc/init.d/tailscale
+/etc/hotplug.d/iface/19-tailscale-iface
+/etc/hotplug.d/net/19-tailscale-net
+/usr/bin/gl_tailscale
+/usr/lib/oui-httpd/rpc/tailscale

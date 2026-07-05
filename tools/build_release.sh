@@ -21,6 +21,22 @@ TOOLS="$(cd "$(dirname "$0")" && pwd)"
 DEPS="libc, ca-bundle, kmod-tun"
 mkdir -p "$OUT/bin"
 
+# postinst shipped in the binary ipk: after `opkg upgrade tailscale` the file is
+# replaced but the old tailscaled keeps running, so the new build never starts.
+# Restart the service (if the init script is present and enabled) to pick it up.
+# Guarded: skip in an offline image root ($IPKG_INSTROOT), and no-op on a first
+# install where gl-sdk4-tailscale (the init owner) isn't in place yet -- setup.sh
+# does the enable+start there.
+POSTINST="$OUT/postinst.tailscale"
+cat > "$POSTINST" <<'EOF'
+#!/bin/sh
+[ -n "$IPKG_INSTROOT" ] && exit 0
+if [ -x /etc/init.d/tailscale ] && /etc/init.d/tailscale enabled 2>/dev/null; then
+    /etc/init.d/tailscale restart
+fi
+exit 0
+EOF
+
 # --- compile: one binary per instruction set --------------------------------
 # build_dist.sh --box => ts_include_cli (combined tailscaled+CLI, argv0 dispatch)
 build() { # $1=label $2=goarch $3="ENV=VAL ..." $4=extra_flags
@@ -67,7 +83,9 @@ pack() { # $1=archdir $2=binary_path $3=pkgname(tailscale|tailscale-micro)
   rm -rf "$s"; mkdir -p "$s/usr/sbin" "$s/lib/upgrade/keep.d"
   install -m0755 "$bin" "$s/usr/sbin/tailscaled"
   ln -sf tailscaled "$s/usr/sbin/tailscale"
-  printf '/etc/config/tailscale\n/etc/tailscale/\n' > "$s/lib/upgrade/keep.d/tailscale"
+  # Persist across firmware upgrade: without these in keep.d, sysupgrade wipes the
+  # binary and the plugin's config/state, so a fw flash would silently remove Tailscale.
+  printf '/etc/config/tailscale\n/etc/tailscale/\n/usr/sbin/tailscaled\n/usr/sbin/tailscale\n' > "$s/lib/upgrade/keep.d/tailscale"
   if [ "$pkg" = tailscale ]; then
     ver="${TS_VER}-${PKG_REV}"; prov="tailscaled"; conf=""
     desc="Tailscale (tailscale) for ${archdir}, current ${TS_VER} softfloat/vfp. Binary only; GUI via gl-sdk4-tailscale."
@@ -78,7 +96,7 @@ pack() { # $1=archdir $2=binary_path $3=pkgname(tailscale|tailscale-micro)
   mkdir -p "$OUT/$archdir"
   python3 "$TOOLS/mkipk.py" --name "$pkg" --version "$ver" --arch "$archdir" \
     --section net --depends "$DEPS" --provides "$prov" ${conf:+--conflicts "$conf"} \
-    --desc "$desc" --data-dir "$s" \
+    --desc "$desc" --data-dir "$s" --postinst "$POSTINST" \
     --out "$OUT/$archdir/${pkg}_${ver}_${archdir}.ipk"
 }
 

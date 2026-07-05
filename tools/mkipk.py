@@ -69,6 +69,7 @@ def main():
     ap.add_argument("--maintainer", default="DigitalCyberSoft <noreply@users.noreply.github.com>")
     ap.add_argument("--desc", default="")
     ap.add_argument("--data-dir", required=True, help="staged root of installed files")
+    ap.add_argument("--postinst", default="", help="optional postinst script to ship in control.tar.gz")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
@@ -100,6 +101,10 @@ def main():
         os.makedirs(ctrl_dir)
         with open(os.path.join(ctrl_dir, "control"), "w") as f:
             f.write(ctrl_text)
+        if a.postinst:
+            dst = os.path.join(ctrl_dir, "postinst")
+            shutil.copyfile(a.postinst, dst)
+            os.chmod(dst, 0o755)
         control_tgz = os.path.join(work, "control.tar.gz")
         make_tar_gz(ctrl_dir, control_tgz)
 

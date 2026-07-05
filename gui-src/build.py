@@ -78,6 +78,13 @@ def build(pkgdir):
         cdir = os.path.join(work, "control"); os.makedirs(cdir)
         with open(os.path.join(cdir, "control"), "w") as f:
             f.write(ctrl)
+        # optional control scripts: ship <pkgdir>/postinst (etc.) in control.tar.gz
+        for script in ("preinst", "postinst", "prerm", "postrm"):
+            sp = os.path.join(pkgdir, script)
+            if os.path.exists(sp):
+                dp = os.path.join(cdir, script)
+                shutil.copyfile(sp, dp)
+                os.chmod(dp, 0o755)
         make_tar_gz(cdir, os.path.join(work, "control.tar.gz"))
         with open(os.path.join(work, "debian-binary"), "w") as f:
             f.write("2.0\n")

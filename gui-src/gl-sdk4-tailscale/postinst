@@ -1,0 +1,14 @@
+#!/bin/sh
+# After an opkg install/upgrade of this backend: enable boot autostart and start
+# the service so a fresh install comes up enabled by default and an upgrade picks
+# up the new init/gl_tailscale/firewall/rpc handler. The init script self-gates on
+# uci tailscale.settings.enabled, so `restart` is a no-op for a user who turned it
+# off. Starting only brings tailscaled up idle (NeedsLogin) until the user logs in.
+# Guarded: skip in an offline image root.
+[ -n "$IPKG_INSTROOT" ] && exit 0
+if [ -x /etc/init.d/tailscale ]; then
+    /etc/init.d/tailscale enable 2>/dev/null
+    /etc/init.d/tailscale restart 2>/dev/null
+fi
+/etc/init.d/rpcd restart 2>/dev/null
+exit 0
