@@ -6,3 +6,4 @@
 /etc/hotplug.d/net/19-tailscale-net
 /usr/bin/gl_tailscale
 /usr/lib/oui-httpd/rpc/tailscale
+/etc/rc.d/S80tailscale
