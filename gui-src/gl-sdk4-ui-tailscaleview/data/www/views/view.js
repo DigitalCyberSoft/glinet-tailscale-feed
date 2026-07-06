@@ -1082,12 +1082,24 @@ module.exports = function(t) {
           on: {
             click: t.handleCheckUpdate
           }
-        }, [t._v(t._s(t.$t("tailscale.check_update_btn")))]) : t.updateInfo.update_available ? e("span", {
+        }, [t._v(t._s(t.$t("tailscale.check_update_btn")))]) : t.updateInfo.update_available ? e("div", [e("div", {
+          staticClass: "ts-update-list"
+        }, t.updateInfo.packages.map((function(p) {
+          return e("div", {
+            staticClass: "ts-update-item"
+          }, [t._v(t._s(p.name) + ": " + t._s(p.installed) + " → " + t._s(p.available))])
+        }))), e("span", {
           staticClass: "text-btn",
           on: {
             click: t.handleUpdateAll
           }
-        }, [t._v(t._s(t.$t("tailscale.update_all_btn")))]) : e("span", [t._v(t._s(t.$t("tailscale.up_to_date")))])])]), e("li", [e("div", [t._v(t._s(t.$t("core.enable")) + " Tailscale")]), e("div", [e("gl-switch", {
+        }, [t._v(t._s(t.$t("tailscale.update_all_btn")))])]) : e("div", [e("div", {
+          staticClass: "ts-update-list"
+        }, (t.updateInfo.installed || []).map((function(p) {
+          return e("div", {
+            staticClass: "ts-update-item"
+          }, [t._v(t._s(p.name) + ": " + t._s(p.version))])
+        }))), e("span", [t._v(t._s(t.$t("tailscale.up_to_date")))])])])]), e("li", [e("div", [t._v(t._s(t.$t("core.enable")) + " Tailscale")]), e("div", [e("gl-switch", {
           attrs: {
             size: "small"
           },

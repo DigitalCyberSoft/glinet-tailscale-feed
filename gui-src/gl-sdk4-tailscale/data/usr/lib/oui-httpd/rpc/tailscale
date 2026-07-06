@@ -554,9 +554,15 @@ function M.check_update()
         "gl-sdk4-tailscale", "gl-sdk4-ui-tailscaleview", "gl-sdk4-tailscale-mullvad",
     }
     local packages = {}
+    local installed = {}
     for _, name in ipairs(ours) do
         local iv = inst_ver[name]
         local fv = feed_ver[name]
+        -- installed set: what the router is on now (drives the panel's "current
+        -- version" display, including the up-to-date case where packages is empty).
+        if iv then
+            installed[#installed + 1] = { name = name, version = iv }
+        end
         -- Only report a package that is installed AND has a strictly-newer feed
         -- version. Use opkg's own comparator: our versions carry a `1:` epoch, which
         -- a string compare would get wrong (git-2025.x vs 1:1.2.1-1).
@@ -569,7 +575,11 @@ function M.check_update()
         end
     end
 
-    return { update_available = (#packages > 0), packages = packages }
+    return {
+        update_available = (#packages > 0),
+        packages = packages,
+        installed = installed,
+    }
 end
 
 --[[
