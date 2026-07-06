@@ -39,6 +39,16 @@ EOF
 
 # --- compile: one binary per instruction set --------------------------------
 # build_dist.sh --box => ts_include_cli (combined tailscaled+CLI, argv0 dispatch)
+#
+# GOFLAGS=-trimpath: strip the build-machine path prefix (the tsgo toolchain cache
+# and TS_SRC checkout dir) from the embedded file table. build_dist.sh does not set
+# it, so without this every source path ships absolute (verified: the file name
+# table held /home/user/.cache/tsgo/<hash>/src/... and the TS_SRC path). Shaves the
+# prefix off each file entry and makes the build reproducible; go merges GOFLAGS
+# into every `go build`, and nothing else sets it. -s -w is already applied by
+# --strip; .gopclntab can't be stripped, so this is the only non-UPX size lever left.
+GOFLAGS=-trimpath
+export GOFLAGS
 build() { # $1=label $2=goarch $3="ENV=VAL ..." $4=extra_flags
   local label="$1" goarch="$2" goenv="$3" flags="$4"
   echo ">>> build $label ($goarch $goenv $flags)"
