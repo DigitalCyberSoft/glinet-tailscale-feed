@@ -3,6 +3,14 @@
 # one shot -- the engine behind the panel's "Updates" section (rpc do_update) and
 # usable on the CLI. Fixes opkg NOT cascading upgrades through unversioned Depends.
 #
+# Only packages whose feed version is strictly newer than the installed version are
+# reinstalled; anything already at the current build is left untouched. Reinstalling
+# unconditionally re-ran `opkg install` on the ~15MB tailscale binary every invocation,
+# and `opkg install` of an already-present package is a non-atomic remove-then-unpack:
+# if it is interrupted (device reboot, OOM-kill mid-unpack) the working binary is
+# stripped with no rollback. Skipping up-to-date packages removes that window. The
+# up-to-date check uses opkg's own epoch-aware comparator, matching rpc check_update.
+#
 # The feed is unsigned, so --force-signature is required on update AND install (plain
 # `opkg update` prunes the unsigned list). Respects the chosen binary source:
 #   feed         -> opkg install the tailscale / tailscale-micro package
@@ -14,30 +22,47 @@ if ! opkg info gl-sdk4-tailscale >/dev/null 2>&1; then
     exit 1
 fi
 
+# opkg's own version comparison (epoch-aware) decides what is actually out of date.
+# Our package names are unique to this feed, so a cross-feed candidate cannot shadow
+# them. Format is "name - oldver - newver"; a match means installed << candidate.
+UPGRADABLE=$(opkg list-upgradable 2>/dev/null)
+is_installed()  { opkg list-installed 2>/dev/null | grep -q "^$1 "; }
+needs_upgrade() { printf '%s\n' "$UPGRADABLE" | grep -q "^$1 - "; }
+
 rc=0
+did=""
+# Reinstall $1 only if it is installed AND the feed carries a strictly-newer version.
+upgrade_if_stale() {
+    is_installed "$1" || return 0
+    needs_upgrade "$1" || return 0
+    if opkg install --force-signature "$1"; then
+        did="$did $1"
+    else
+        rc=1
+    fi
+}
+
 bsrc=$(uci -q get tailscale.settings.binary_source)
 if [ "$bsrc" = "admonstrator" ]; then
+    # ts-admon-update does its own up-to-date check against their release.
     [ -x /usr/bin/ts-admon-update ] && { /usr/bin/ts-admon-update || rc=1; }
 else
-    # reinstall whichever feed binary tier is installed (nothing if neither)
-    if opkg list-installed 2>/dev/null | grep -q '^tailscale-micro '; then
-        opkg install --force-signature tailscale-micro || rc=1
-    elif opkg list-installed 2>/dev/null | grep -q '^tailscale '; then
-        opkg install --force-signature tailscale || rc=1
-    fi
+    # whichever feed binary tier is installed (nothing if neither)
+    upgrade_if_stale tailscale-micro
+    upgrade_if_stale tailscale
 fi
 
 # GUI packages last (deps resolve to whatever binary is present). Install
 # gl-sdk4-tailscale last so its postinst (which restarts rpcd) runs at the end.
 for p in gl-sdk4-tailscale-mullvad gl-sdk4-ui-tailscaleview gl-sdk4-tailscale; do
-    if opkg list-installed 2>/dev/null | grep -q "^$p "; then
-        opkg install --force-signature "$p" || rc=1
-    fi
+    upgrade_if_stale "$p"
 done
 
-if [ "$rc" = 0 ]; then
-    echo "glits-upgrade: all installed feed packages are at the current build."
-else
+if [ "$rc" != 0 ]; then
     echo "glits-upgrade: one or more installs failed" >&2
+elif [ -n "$did" ]; then
+    echo "glits-upgrade: updated:$did"
+else
+    echo "glits-upgrade: all installed feed packages already at the current build; nothing to do."
 fi
 exit $rc

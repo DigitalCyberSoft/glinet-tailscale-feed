@@ -34,7 +34,25 @@ start_service() {
   procd_set_param command /usr/sbin/tailscaled
 
   # starting with v1.48.1 ENV variable is required to enable autodetection of iptables / nftables
-  procd_set_param env TS_DEBUG_FIREWALL_MODE=auto
+  local ts_env="TS_DEBUG_FIREWALL_MODE=auto"
+
+  # On low-RAM devices, cap tailscaled's Go heap. A large tailnet netmap (hundreds of
+  # peers) grows the heap until the kernel oom-kills tailscaled; procd respawns it and
+  # it never stays up. GOMEMLIMIT is a soft ceiling and GOGC=50 keeps the steady heap
+  # lower, trading some CPU (mostly during netmap sync) for staying alive. Measured on
+  # GL-E750 (121MB RAM, ~520-peer tailnet): resident ~41MB -> ~27MB, no more oom-kills,
+  # ~0% steady-state GC. 64MiB is chosen over a tighter limit because a limit that sits
+  # on the working set forces constant GC (13% CPU here); 64MiB leaves burst headroom
+  # (64 + GL stack ~44 = 108MB < 121MB) while GC goes idle once synced. Devices with
+  # >=192MB skip this -- they don't oom and shouldn't pay the GC cost. Mirrors the
+  # low-flash poll-throttle gate in the rpc handler.
+  local memkb
+  memkb=$(sed -n 's/^MemTotal:[[:space:]]*\([0-9]*\).*/\1/p' /proc/meminfo)
+  if [ -n "$memkb" ] && [ "$memkb" -lt 196608 ]; then
+    ts_env="$ts_env GOGC=50 GOMEMLIMIT=64MiB"
+  fi
+  # word-split ts_env so each KEY=VALUE becomes its own procd env param
+  procd_set_param env $ts_env
 
   # Set the port to listen on for incoming VPN packets.
   # Remote nodes will automatically be informed about the new port number,
