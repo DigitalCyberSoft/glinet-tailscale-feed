@@ -822,6 +822,7 @@ module.exports = function(t) {
           exitNodeIpErr: !1,
           getStatusTimeId: null,
           waitTimeId: null,
+          pollInterval: 5e3,
           auth_url: "",
           showAuthUrl: !1,
           showExitNodeWarning: !1
@@ -851,7 +852,7 @@ module.exports = function(t) {
         },
         methods: {
           ...Object(s.a)(["changeShowDisableMask", "getSystemStatusNow"]),
-          getStatusTimeout(t = 5e3) {
+          getStatusTimeout(t = this.pollInterval) {
             clearTimeout(this.getStatusTimeId), this.getStatusTimeId = setTimeout((() => {
               this.getStatus()
             }), t)
@@ -951,7 +952,7 @@ module.exports = function(t) {
           },
           getConfig() {
             l.getTailscaleConfig().then((t => {
-              t && t.err_msg || (this.config.enabled = t.enabled || !1, this.config.lan_enabled = t.lan_enabled || !1, this.config.wan_enabled = t.wan_enabled || !1, this.config.lan_gateway = t.lan_gateway || !1, this.config.advertise_exit_node = t.advertise_exit_node || !1, this.config.keep_on_upgrade = t.keep_on_upgrade || !1, this.config.killswitch = t.killswitch !== !1, this.config.exit_node_ip = t.exit_node_ip || "", this.config.manual = "" !== this.config.exit_node_ip, this.binary_source = t.binary_source || "feed", this.binary_present = t.binary_present !== !1, this.lan_ip = t.lan_ip || "", this.oldConfig = this.$deepCopy(this.config), t.enabled ? (this.getStatusTimeout(0), this.getNodeList(!1)) : clearTimeout(this.getStatusTimeId))
+              t && t.err_msg || (this.config.enabled = t.enabled || !1, this.config.lan_enabled = t.lan_enabled || !1, this.config.wan_enabled = t.wan_enabled || !1, this.config.lan_gateway = t.lan_gateway || !1, this.config.advertise_exit_node = t.advertise_exit_node || !1, this.config.keep_on_upgrade = t.keep_on_upgrade || !1, this.config.killswitch = t.killswitch !== !1, this.config.exit_node_ip = t.exit_node_ip || "", this.config.manual = "" !== this.config.exit_node_ip, this.binary_source = t.binary_source || "feed", this.binary_present = t.binary_present !== !1, this.lan_ip = t.lan_ip || "", this.pollInterval = t.poll_interval || 5e3, this.oldConfig = this.$deepCopy(this.config), t.enabled ? (this.getStatusTimeout(0), this.getNodeList(!1)) : clearTimeout(this.getStatusTimeId))
             }))
           },
           getStatus() {

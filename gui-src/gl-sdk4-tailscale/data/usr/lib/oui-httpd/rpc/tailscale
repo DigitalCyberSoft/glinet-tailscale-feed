@@ -36,6 +36,31 @@ local function tailscale_status(wait_time, no_peers)
     return nil
 end
 
+-- Recommended UI status-poll cadence (ms), reported to the panel via get_config.
+-- The panel polls get_status on this interval and every poll forks the tailscale
+-- binary to query the daemon: cheap output (--peers=false) but a real per-poll CPU
+-- hit on a single-core mips. Low-flash GL routers (< 256 MB total flash, e.g. the
+-- 128 MB-NAND E750) are the weak tier and poll slower. Flash is summed from
+-- /proc/mtd; eMMC/large-NAND devices that expose no /proc/mtd fall through to the
+-- fast default -- those are the high tier, so not throttling them is correct.
+local FLASH_SLOW_THRESHOLD = 256 * 1024 * 1024  -- bytes
+local POLL_FAST = 5000   -- stock cadence
+local POLL_SLOW = 20000  -- low-flash cadence
+local function poll_interval_ms()
+    local f = io.open("/proc/mtd", "r")
+    if not f then return POLL_FAST end
+    local total = 0
+    for line in f:lines() do
+        local hexsize = line:match("^mtd%d+:%s+(%x+)")
+        if hexsize then total = total + tonumber(hexsize, 16) end
+    end
+    f:close()
+    if total > 0 and total < FLASH_SLOW_THRESHOLD then
+        return POLL_SLOW
+    end
+    return POLL_FAST
+end
+
 local function get_exit_node_info()
     local r = tailscale_status()
     local res = {}
@@ -258,6 +283,9 @@ function M.get_config()
         local lan_info = lnet.ipcalc({lanip, lanmask})
         res.lan_ip = lan_info.network.."/"..lan_info.prefix
     end
+
+    -- Poll cadence for the panel's get_status loop; slower on low-flash hardware.
+    res.poll_interval = poll_interval_ms()
 
     return res
 end
