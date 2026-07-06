@@ -498,29 +498,74 @@ end
 --[[
     @method-type: call
     @method-name: check_update
-    @method-desc: Refresh the feed and report which feed packages have updates
+    @method-desc: Fetch our feed's index and report which of our packages have updates
 
     @out bool    update_available
     @out array   packages            list of {name, installed, available}
 --]]
 function M.check_update()
-    -- refresh package lists (unsigned feed -> --force-signature keeps its list)
-    local u = ngx.pipe.spawn({"opkg", "update", "--force-signature"})
-    if u then u:wait() end
+    -- Pull ONLY our feed's package index, not a full `opkg update`. `opkg update`
+    -- refreshes every configured feed serially with no per-feed timeout, so one slow
+    -- or dead unrelated feed (seen in the field: an employee-wifi feed hanging ~90s)
+    -- blocks this rpc past the panel's 60s request timeout and surfaces as
+    -- "Request timed out". Our feed is unsigned, so a plain wget is enough; the base
+    -- URL (which carries the arch, e.g. .../glinet-tailscale-feed/mips_24kc) comes
+    -- straight from opkg's own config so we track whatever arch this router installed.
+    local base
+    local cf = io.open("/etc/opkg/customfeeds.conf", "r")
+    if cf then
+        for line in cf:lines() do
+            local u = line:match("(https?://%S+glinet%-tailscale%-feed%S*)")
+            if u then base = u break end
+        end
+        cf:close()
+    end
+    if not base then
+        return { update_available = false, packages = {} }
+    end
 
-    local feed = {
-        ["tailscale"] = true, ["tailscale-micro"] = true,
-        ["gl-sdk4-tailscale"] = true, ["gl-sdk4-ui-tailscaleview"] = true,
-        ["gl-sdk4-tailscale-mullvad"] = true,
+    -- fetch + decompress the index in one short-bounded shell (timeout caps the wget)
+    local feed_ver = {}
+    local p = ngx.pipe.spawn({"sh", "-c",
+        "timeout 20 wget -q -O /tmp/glits_Packages.gz '" .. base ..
+        "/Packages.gz' && zcat /tmp/glits_Packages.gz"})
+    local out = p and p:stdout_read_all() or ""
+    if p then p:wait() end
+    local pkg
+    for line in out:gmatch("[^\n]+") do
+        local n = line:match("^Package:%s*(%S+)")
+        if n then pkg = n end
+        local v = line:match("^Version:%s*(%S+)")
+        if v and pkg then feed_ver[pkg] = v end
+    end
+
+    -- installed versions of our packages
+    local inst_ver = {}
+    local li = ngx.pipe.spawn({"opkg", "list-installed"})
+    local liout = li and li:stdout_read_all() or ""
+    if li then li:wait() end
+    for line in liout:gmatch("[^\n]+") do
+        local n, v = line:match("^(%S+)%s+%-%s+(%S+)")
+        if n then inst_ver[n] = v end
+    end
+
+    local ours = {
+        "tailscale", "tailscale-micro",
+        "gl-sdk4-tailscale", "gl-sdk4-ui-tailscaleview", "gl-sdk4-tailscale-mullvad",
     }
     local packages = {}
-    local p = ngx.pipe.spawn({"opkg", "list-upgradable"})
-    local out = p and p:stdout_read_all() or ""
-    for line in out:gmatch("[^\n]+") do
-        -- opkg list-upgradable prints: "name - installed_ver - available_ver"
-        local name, old, new = line:match("^(%S+)%s+%-%s+(%S+)%s+%-%s+(%S+)")
-        if name and feed[name] then
-            packages[#packages + 1] = { name = name, installed = old, available = new }
+    for _, name in ipairs(ours) do
+        local iv = inst_ver[name]
+        local fv = feed_ver[name]
+        -- Only report a package that is installed AND has a strictly-newer feed
+        -- version. Use opkg's own comparator: our versions carry a `1:` epoch, which
+        -- a string compare would get wrong (git-2025.x vs 1:1.2.1-1).
+        if iv and fv then
+            local cmp = ngx.pipe.spawn({"opkg", "compare-versions", iv, "<<", fv})
+            local newer = cmp and cmp:wait()  -- true only when installed << feed
+            if newer then
+                packages[#packages + 1] = { name = name, installed = iv, available = fv }
+            end
         end
     end
 
