@@ -422,45 +422,30 @@ function M.set_config(params)
         c:set("tailscale", "settings", "enabled", 1)
     end
 
-    if lan_enabled then
-        c:set("tailscale", "settings", "lan_enabled", 1)
-    else
-        c:set("tailscale", "settings", "lan_enabled", 0)
+    -- nil = the caller did not send the field: leave the stored value untouched.
+    -- The old `if x then 1 else 0` wrote 0 for OMITTED fields too, so any partial
+    -- caller wiped saved toggles -- most notably the panel's own disable path,
+    -- which sends only {enabled=false}: every disable/enable cycle silently reset
+    -- lan/wan/gateway/advertise and cleared the chosen exit node (seen live on the
+    -- XE3000, "I have set them multiple times"). Explicit false still writes 0;
+    -- keep_on_upgrade/killswitch below already followed this contract.
+    local function set_bool(opt, v)
+        if v == true then
+            c:set("tailscale", "settings", opt, 1)
+        elseif v == false then
+            c:set("tailscale", "settings", opt, 0)
+        end
     end
+    set_bool("lan_enabled", lan_enabled)
+    set_bool("wan_enabled", wan_enabled)
+    set_bool("lan_gateway", lan_gateway)
+    set_bool("advertise_exit_node", advertise_exit_node)
 
-    if wan_enabled then
-        c:set("tailscale", "settings", "wan_enabled", 1)
-    else
-        c:set("tailscale", "settings", "wan_enabled", 0)
-    end
-
-    if lan_gateway then
-        c:set("tailscale", "settings", "lan_gateway", 1)
-    else
-        c:set("tailscale", "settings", "lan_gateway", 0)
-    end
-
-    if advertise_exit_node then
-        c:set("tailscale", "settings", "advertise_exit_node", 1)
-    else
-        c:set("tailscale", "settings", "advertise_exit_node", 0)
-    end
-
-    -- nil (older panel that never sends it) leaves the current value untouched;
-    -- the gl_tailscale restart below re-applies the sysupgrade.conf block from it.
-    if keep_on_upgrade == true then
-        c:set("tailscale", "settings", "keep_on_upgrade", 1)
-    elseif keep_on_upgrade == false then
-        c:set("tailscale", "settings", "keep_on_upgrade", 0)
-    end
-
-    -- nil (older panel) leaves it unchanged; default-on is handled in get_config
-    -- and the ts_killswitch binary (killswitch != 0).
-    if killswitch == true then
-        c:set("tailscale", "settings", "killswitch", 1)
-    elseif killswitch == false then
-        c:set("tailscale", "settings", "killswitch", 0)
-    end
+    -- gl_tailscale restart below re-applies the sysupgrade.conf block from
+    -- keep_on_upgrade; killswitch default-on is handled in get_config and the
+    -- ts_killswitch binary (killswitch != 0).
+    set_bool("keep_on_upgrade", keep_on_upgrade)
+    set_bool("killswitch", killswitch)
 
     -- nil (older panel that never sends it) leaves the control server unchanged;
     -- "" reverts to the official Tailscale service. On a CHANGE, log the node out
@@ -483,10 +468,11 @@ function M.set_config(params)
         end
     end
 
-    if exit_node_ip then
+    -- Same nil-preserving contract: "" clears the exit node (handleApply sends ""
+    -- explicitly in non-manual mode, and the advertise/login_server branches above
+    -- assign ""), an omitted field keeps the user's choice.
+    if exit_node_ip ~= nil then
         c:set("tailscale", "settings", "exit_node_ip", exit_node_ip)
-    else
-        c:set("tailscale", "settings", "exit_node_ip", "")
     end
 
     if enabled == false then
