@@ -20,3 +20,8 @@ config settings 'settings'
     # 'admonstrator' = the smaller build fetched by ts-admon-update. The glue no
     # longer Depends on the feed binary, so either source (or neither) is valid.
     option binary_source 'feed'
+    # Base URL of a self-hosted control server (e.g. Headscale:
+    # https://headscale.example.com). Empty uses the official Tailscale service.
+    # gl_tailscale re-sends it on every `tailscale up` because --reset would
+    # otherwise revert the node to the official servers.
+    option login_server ''

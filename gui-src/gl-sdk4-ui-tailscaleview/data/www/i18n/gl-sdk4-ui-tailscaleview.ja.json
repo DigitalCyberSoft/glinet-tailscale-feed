@@ -34,6 +34,12 @@
         "lan_gateway_label": "LAN内のデバイスがTailscaleを利用できるようにする",
         "lan_gateway_tips": "このオプションを有効にすると、LAN内のデバイスは各デバイスにTailscaleをインストールしなくても、このルーター経由でTailscaleネットワークにアクセスできるようになります。",
         "advertise_exit_node_label": "出口ノードとして提供する",
-        "advertise_exit_node_tips": "このオプションを有効にすると、このルーターがTailscaleの出口ノードとして提供され、tailnet内のデバイスのインターネット通信を中継します。Tailscale管理コンソールで承認する必要があります。上の出口ノードの選択とは同時に使用できません。"
+        "advertise_exit_node_tips": "このオプションを有効にすると、このルーターがTailscaleの出口ノードとして提供され、tailnet内のデバイスのインターネット通信を中継します。Tailscale管理コンソールで承認する必要があります。上の出口ノードの選択とは同時に使用できません。",
+        "authkey_tips": "また、事前に生成した認証キーでもログインできます：$$$$認証キーを入力$$$$。",
+        "authkey_dialog_title": "認証キーでログイン",
+        "authkey_input_tips": "Tailscale管理コンソール（Settings → Keys）またはHeadscaleサーバー（'headscale preauthkeys create'）で生成した認証キーを貼り付けてください。ブラウザのリンクを使わずに、デバイスはすぐにログインします。",
+        "authkey_err_msg": "認証キーによるログインに失敗しました。",
+        "login_server_label": "カスタムログインサーバー（Headscale）",
+        "login_server_tips": "Headscaleなどのセルフホスト型コントロールサーバーのベースURL（例：https://headscale.example.com）。空欄の場合は公式のTailscaleサービスを使用します。変更すると、デバイスは現在のネットワークからログアウトされ、新しいサーバーで再ログインが必要になります。"
     }
 }

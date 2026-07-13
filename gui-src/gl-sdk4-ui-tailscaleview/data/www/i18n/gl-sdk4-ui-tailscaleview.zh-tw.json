@@ -34,6 +34,12 @@
         "lan_gateway_label": "允許 LAN 設備使用 Tailscale",
         "lan_gateway_tips": "如果啟用此選項，LAN 內的設備無需自行安裝 Tailscale，即可通過本路由器訪問 Tailscale 虛擬網絡。",
         "advertise_exit_node_label": "宣告為出口節點",
-        "advertise_exit_node_tips": "如果啟用此選項，本路由器將作為 Tailscale 出口節點，為 tailnet 內的設備轉發互聯網流量。需在 Tailscale 管理控制台中批准。不能與上方選擇出口節點同時使用。"
+        "advertise_exit_node_tips": "如果啟用此選項，本路由器將作為 Tailscale 出口節點，為 tailnet 內的設備轉發互聯網流量。需在 Tailscale 管理控制台中批准。不能與上方選擇出口節點同時使用。",
+        "authkey_tips": "也可以使用預先產生的授權金鑰登入：$$$$輸入授權金鑰$$$$。",
+        "authkey_dialog_title": "使用授權金鑰登入",
+        "authkey_input_tips": "貼上在 Tailscale 管理主控台（Settings → Keys）或 Headscale 伺服器（'headscale preauthkeys create'）中產生的授權金鑰。裝置將立即登入，無需瀏覽器連結。",
+        "authkey_err_msg": "授權金鑰登入失敗。",
+        "login_server_label": "自訂登入伺服器（Headscale）",
+        "login_server_tips": "自架控制伺服器（如 Headscale）的基礎 URL，例如 https://headscale.example.com。留空則使用官方 Tailscale 服務。變更後裝置將登出目前網路，需要在新伺服器上重新登入。"
     }
 }

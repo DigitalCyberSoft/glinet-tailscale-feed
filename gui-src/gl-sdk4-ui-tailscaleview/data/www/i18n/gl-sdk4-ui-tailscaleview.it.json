@@ -34,6 +34,12 @@
         "lan_gateway_label": "Consenti ai dispositivi LAN di usare Tailscale",
         "lan_gateway_tips": "Se questa opzione è abilitata, i dispositivi nella LAN possono accedere alla rete Tailscale tramite questo router senza installare Tailscale su ciascun dispositivo.",
         "advertise_exit_node_label": "Annuncia come nodo di uscita",
-        "advertise_exit_node_tips": "Se abilitata, questo router si offre come nodo di uscita Tailscale e instrada il traffico Internet per i dispositivi della tua tailnet. Devi approvarlo nella console di amministrazione di Tailscale. Non può essere usato contemporaneamente alla selezione di un nodo di uscita sopra."
+        "advertise_exit_node_tips": "Se abilitata, questo router si offre come nodo di uscita Tailscale e instrada il traffico Internet per i dispositivi della tua tailnet. Devi approvarlo nella console di amministrazione di Tailscale. Non può essere usato contemporaneamente alla selezione di un nodo di uscita sopra.",
+        "authkey_tips": "In alternativa, accedi con una chiave di autenticazione generata in precedenza: $$$$Inserisci chiave di autenticazione$$$$.",
+        "authkey_dialog_title": "Accedi con chiave di autenticazione",
+        "authkey_input_tips": "Incolla una chiave di autenticazione generata nella console di amministrazione di Tailscale (Settings → Keys) o dal tuo server Headscale ('headscale preauthkeys create'). Il dispositivo accede immediatamente, senza il link del browser.",
+        "authkey_err_msg": "Accesso con chiave di autenticazione non riuscito.",
+        "login_server_label": "Server di accesso personalizzato (Headscale)",
+        "login_server_tips": "URL di base di un server di controllo self-hosted come Headscale, ad es. https://headscale.example.com. Lascia vuoto per usare il servizio ufficiale Tailscale. La modifica disconnette il dispositivo dalla rete attuale e dovrai accedere di nuovo sul nuovo server."
     }
 }

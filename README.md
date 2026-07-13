@@ -10,6 +10,12 @@ Built for **seven** GL architectures (see the table below); GL-E750/E750V2 = QCA
 
 ![GL.iNet admin panel: Tailscale page, showing the restored panel plus the "Allow LAN Devices to Use Tailscale" and "Advertise as Exit Node" toggles this feed adds.](glinet-tailscale-panel.png)
 
+Beyond GL's stock panel, this feed's panel adds: LAN-gateway and advertise-exit-node
+toggles, an exit-node kill switch, keep-through-firmware-upgrade, in-panel package updates,
+a binary-source picker, **auth key login** (paste a pre-generated key instead of using the
+browser bind link) and **custom login server support for self-hosted control planes such
+as [Headscale](https://headscale.net/)**.
+
 ## Packages
 
 | Package | Version | Download | Purpose |

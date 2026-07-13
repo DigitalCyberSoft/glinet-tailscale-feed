@@ -3,6 +3,8 @@
 . /lib/functions/gl_util.sh
 
 action="$1"
+# optional: `restart <authkey>` logs in with a pre-generated key on this `up`
+authkey="$2"
 TS_POLICY_ROUTE=/tmp/ts_policy_route
 TS_FIREWALL_SECTION=gltailscale
 TAILSCALE_ROUTE_TABLE=52
@@ -384,8 +386,24 @@ if [ "$action" = "restart" ];then
 
         add_network_policy_route "guest"
         add_network_policy_route "iot"
-        
-        timeout 10 /usr/sbin/tailscale up --reset --accept-routes $param --timeout 3s --accept-dns=false > /dev/null
+
+        # Self-hosted control plane (e.g. Headscale). MUST be re-sent on every `up`:
+        # with --reset an omitted --login-server reverts ControlURL to the official
+        # Tailscale servers (cli/up.go defaults the flag to DefaultControlURL and
+        # always sets prefs.ControlURL from it), silently logging the node out of
+        # the self-hosted network. The rpc validates the value to a URL-safe charset.
+        login_server=$(uci -q get tailscale.settings.login_server)
+        [ -n "$login_server" ] && param="$param --login-server=$login_server"
+
+        if [ -n "$authkey" ]; then
+            # One-shot auth key passed by the panel's login rpc as $2. First login
+            # runs the full control handshake (~50s worst case on mips), so allow
+            # longer than the interactive path, and keep stderr so the rpc can
+            # surface "invalid key" to the panel.
+            timeout 60 /usr/sbin/tailscale up --reset --accept-routes $param --auth-key="$authkey" --timeout 45s --accept-dns=false > /dev/null 2>/tmp/ts_login_err
+        else
+            timeout 10 /usr/sbin/tailscale up --reset --accept-routes $param --timeout 3s --accept-dns=false > /dev/null
+        fi
         apply_tailscale_mtu
     else
         /etc/init.d/tailscale stop

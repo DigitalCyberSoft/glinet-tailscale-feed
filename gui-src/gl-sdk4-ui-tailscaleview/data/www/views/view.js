@@ -765,6 +765,13 @@ module.exports = function(t) {
         tailscaleUnbind: function() {
           return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "logout", {}])
         },
+        tailscaleLogin: function(t) {
+          return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "login", {
+            auth_key: t
+          }], {
+            timeout: 12e4
+          })
+        },
         getTailscaleConfig: function() {
           return o("call", [decodeURIComponent(((document.cookie.match(/(?:^|;\s*)Admin-Token=([^;]*)/) || [])[1] || "")), "tailscale", "get_config", {}])
         },
@@ -809,14 +816,16 @@ module.exports = function(t) {
             advertise_exit_node: !1,
             killswitch: !0,
             manual: !1,
-            exit_node_ip: ""
+            exit_node_ip: "",
+            login_server: ""
           },
           oldConfig: {
             enabled: !1,
             lan_enabled: !1,
             wan_enabled: !1,
             manual: !1,
-            exit_node_ip: ""
+            exit_node_ip: "",
+            login_server: ""
           },
           exitNodeList: [],
           exitNodeIpErr: !1,
@@ -825,6 +834,8 @@ module.exports = function(t) {
           pollInterval: 5e3,
           auth_url: "",
           showAuthUrl: !1,
+          auth_key: "",
+          showAuthKey: !1,
           showExitNodeWarning: !1
         }),
         watch: {
@@ -841,7 +852,7 @@ module.exports = function(t) {
         computed: {
           ...Object(s.b)(["systemStatus"]),
           applyDisabled() {
-            return this.config.enabled === this.oldConfig.enabled && this.config.lan_enabled === this.oldConfig.lan_enabled && this.config.wan_enabled === this.oldConfig.wan_enabled && this.config.manual === this.oldConfig.manual && this.config.exit_node_ip === this.oldConfig.exit_node_ip && this.config.lan_gateway === this.oldConfig.lan_gateway && this.config.advertise_exit_node === this.oldConfig.advertise_exit_node && this.config.keep_on_upgrade === this.oldConfig.keep_on_upgrade && this.config.killswitch === this.oldConfig.killswitch
+            return this.config.enabled === this.oldConfig.enabled && this.config.lan_enabled === this.oldConfig.lan_enabled && this.config.wan_enabled === this.oldConfig.wan_enabled && this.config.manual === this.oldConfig.manual && this.config.exit_node_ip === this.oldConfig.exit_node_ip && this.config.lan_gateway === this.oldConfig.lan_gateway && this.config.advertise_exit_node === this.oldConfig.advertise_exit_node && this.config.keep_on_upgrade === this.oldConfig.keep_on_upgrade && this.config.killswitch === this.oldConfig.killswitch && this.config.login_server === this.oldConfig.login_server
           },
           hasDnsWarning() {
             return this.dns.every((t => this.$regTest.checkPrivateIpSubnet(t)))
@@ -862,7 +873,7 @@ module.exports = function(t) {
             const t = {
               enabled: this.config.enabled
             };
-            t.enabled && (t.lan_enabled = this.config.lan_enabled, t.wan_enabled = this.config.wan_enabled, t.lan_gateway = this.config.lan_gateway, t.keep_on_upgrade = this.config.keep_on_upgrade, t.advertise_exit_node = this.config.advertise_exit_node, t.exit_node_ip = ""), this.setTailscaleConfig(t)
+            t.enabled && (t.lan_enabled = this.config.lan_enabled, t.wan_enabled = this.config.wan_enabled, t.lan_gateway = this.config.lan_gateway, t.keep_on_upgrade = this.config.keep_on_upgrade, t.advertise_exit_node = this.config.advertise_exit_node, t.login_server = (this.config.login_server || "").trim(), t.exit_node_ip = ""), this.setTailscaleConfig(t)
           },
           handleSetExitNode() {
             const t = {
@@ -945,6 +956,18 @@ module.exports = function(t) {
               this.$message.closeAll(), this.changeShowDisableMask(!1)
             }
           },
+          handleAuthKeyLogin() {
+            const t = (this.auth_key || "").trim();
+            t && (this.$message.closeAll(), this.$message({
+              message: this.$t("msg.being_process"),
+              iconClass: "iconfont icon-loading",
+              duration: 0
+            }), this.changeShowDisableMask(!0), l.tailscaleLogin(t).then((t => {
+              this.changeShowDisableMask(!1), this.$message.closeAll(), t && t.err_msg ? this.$message.error(this.$t("tailscale.authkey_err_msg") + " " + t.err_msg) : (this.$message.success(this.$t("msg.success")), this.showAuthKey = !1, this.auth_key = "", this.status = 4, this.getStatusTimeout(0))
+            }), (() => {
+              this.changeShowDisableMask(!1), this.$message.closeAll()
+            })))
+          },
           getNodeList(t = !1) {
             l.getNodeList().then((e => {
               this.$message.closeAll(), e && e.err_msg ? this.$message.error(e.err_code + ", " + e.err_msg) : t && (this.$message.success(this.$t("msg.success")), this.exitNodeList = e.exit_node_list || [], this.$refs.exitNodeIpSelect.focus())
@@ -952,7 +975,7 @@ module.exports = function(t) {
           },
           getConfig() {
             l.getTailscaleConfig().then((t => {
-              t && t.err_msg || (this.config.enabled = t.enabled || !1, this.config.lan_enabled = t.lan_enabled || !1, this.config.wan_enabled = t.wan_enabled || !1, this.config.lan_gateway = t.lan_gateway || !1, this.config.advertise_exit_node = t.advertise_exit_node || !1, this.config.keep_on_upgrade = t.keep_on_upgrade || !1, this.config.killswitch = t.killswitch !== !1, this.config.exit_node_ip = t.exit_node_ip || "", this.config.manual = "" !== this.config.exit_node_ip, this.binary_source = t.binary_source || "feed", this.binary_present = t.binary_present !== !1, this.lan_ip = t.lan_ip || "", this.pollInterval = t.poll_interval || 5e3, this.oldConfig = this.$deepCopy(this.config), t.enabled ? (this.getStatusTimeout(0), this.getNodeList(!1)) : clearTimeout(this.getStatusTimeId))
+              t && t.err_msg || (this.config.enabled = t.enabled || !1, this.config.lan_enabled = t.lan_enabled || !1, this.config.wan_enabled = t.wan_enabled || !1, this.config.lan_gateway = t.lan_gateway || !1, this.config.advertise_exit_node = t.advertise_exit_node || !1, this.config.keep_on_upgrade = t.keep_on_upgrade || !1, this.config.killswitch = t.killswitch !== !1, this.config.exit_node_ip = t.exit_node_ip || "", this.config.manual = "" !== this.config.exit_node_ip, this.config.login_server = t.login_server || "", this.binary_source = t.binary_source || "feed", this.binary_present = t.binary_present !== !1, this.lan_ip = t.lan_ip || "", this.pollInterval = t.poll_interval || 5e3, this.oldConfig = this.$deepCopy(this.config), t.enabled ? (this.getStatusTimeout(0), this.getNodeList(!1)) : clearTimeout(this.getStatusTimeId))
             }))
           },
           getStatus() {
@@ -1023,7 +1046,14 @@ module.exports = function(t) {
           on: {
             click: t.handleToAuth
           }
-        }, [t._v(" " + t._s(t.$t("tailscale.need_login_tips").split("$$$$")[1]) + " ")]), t._v(" " + t._s(t.$t("tailscale.need_login_tips").split("$$$$")[2]) + " ")]) : t._e(), 2 === t.status ? e("p", [t._v(" " + t._s(t.$t("tailscale.need_mandate_tips").split("$$$$")[0]) + " "), e("el-tooltip", {
+        }, [t._v(" " + t._s(t.$t("tailscale.need_login_tips").split("$$$$")[1]) + " ")]), t._v(" " + t._s(t.$t("tailscale.need_login_tips").split("$$$$")[2]) + " ")]) : t._e(), 1 === t.status ? e("p", [t._v(" " + t._s(t.$t("tailscale.authkey_tips").split("$$$$")[0]) + " "), e("span", {
+          staticClass: "text-btn",
+          on: {
+            click: function(e) {
+              t.showAuthKey = !0
+            }
+          }
+        }, [t._v(" " + t._s(t.$t("tailscale.authkey_tips").split("$$$$")[1]) + " ")]), t._v(" " + t._s(t.$t("tailscale.authkey_tips").split("$$$$")[2]) + " ")]) : t._e(), 2 === t.status ? e("p", [t._v(" " + t._s(t.$t("tailscale.need_mandate_tips").split("$$$$")[0]) + " "), e("el-tooltip", {
           attrs: {
             placement: "top",
             content: "https://login.tailscale.com/admin/machines"
@@ -1297,6 +1327,25 @@ module.exports = function(t) {
             },
             expression: "config.advertise_exit_node"
           }
+        })], 1)]), e("li", [e("div", [t._v(" " + t._s(t.$t("tailscale.login_server_label")) + " "), e("el-tooltip", {
+          attrs: {
+            content: t.$t("tailscale.login_server_tips"),
+            placement: "top"
+          }
+        }, [e("span", {
+          staticClass: "iconfont icon-info"
+        })])], 1), e("div", [e("el-input", {
+          attrs: {
+            size: "small",
+            placeholder: "https://headscale.example.com"
+          },
+          model: {
+            value: t.config.login_server,
+            callback: function(e) {
+              t.$set(t.config, "login_server", e)
+            },
+            expression: "config.login_server"
+          }
         })], 1)])]] : t._e()], 2), e("div", {
           staticClass: "btns"
         }, [e("gl-button", {
@@ -1335,6 +1384,49 @@ module.exports = function(t) {
             rel: "noopener noreferrer"
           }
         }, [t._v(" " + t._s(t.auth_url) + " ")])])])], 1), e("div", {
+          staticClass: "auth-dialog"
+        }, [e("el-dialog", {
+          attrs: {
+            visible: t.showAuthKey,
+            "show-close": ""
+          },
+          on: {
+            "update:visible": function(e) {
+              t.showAuthKey = e
+            }
+          }
+        }, [e("span", {
+          attrs: {
+            slot: "title"
+          },
+          slot: "title"
+        }, [t._v(" " + t._s(t.$t("tailscale.authkey_dialog_title")) + " ")]), e("div", {
+          staticClass: "dialog-main"
+        }, [e("p", {
+          staticClass: "desc"
+        }, [t._v(" " + t._s(t.$t("tailscale.authkey_input_tips")) + " ")]), e("el-input", {
+          attrs: {
+            placeholder: "tskey-auth-..."
+          },
+          model: {
+            value: t.auth_key,
+            callback: function(e) {
+              t.auth_key = e
+            },
+            expression: "auth_key"
+          }
+        }), e("div", {
+          staticClass: "btns"
+        }, [e("gl-button", {
+          staticClass: "btn-item",
+          attrs: {
+            type: "primary",
+            disabled: !(t.auth_key || "").trim()
+          },
+          on: {
+            click: t.handleAuthKeyLogin
+          }
+        }, [t._v(t._s(t.$t("core.apply")))])], 1)], 1)])], 1), e("div", {
           staticClass: "exit-node-dialog"
         }, [e("el-dialog", {
           attrs: {

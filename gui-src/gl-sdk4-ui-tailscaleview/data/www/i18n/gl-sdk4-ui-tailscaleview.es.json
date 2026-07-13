@@ -34,6 +34,12 @@
         "lan_gateway_label": "Permitir que los dispositivos LAN usen Tailscale",
         "lan_gateway_tips": "Si esta opción está activada, los dispositivos de la red local (LAN) pueden acceder a la red Tailscale a través de este router sin instalar Tailscale en cada dispositivo.",
         "advertise_exit_node_label": "Anunciar como nodo de salida",
-        "advertise_exit_node_tips": "Si esta opción está activada, este router se ofrece como nodo de salida de Tailscale y enruta el tráfico de Internet de los dispositivos de tu tailnet. Debes aprobarlo en la consola de administración de Tailscale. No puede usarse al mismo tiempo que la selección de un nodo de salida arriba."
+        "advertise_exit_node_tips": "Si esta opción está activada, este router se ofrece como nodo de salida de Tailscale y enruta el tráfico de Internet de los dispositivos de tu tailnet. Debes aprobarlo en la consola de administración de Tailscale. No puede usarse al mismo tiempo que la selección de un nodo de salida arriba.",
+        "authkey_tips": "También puedes iniciar sesión con una clave generada previamente: $$$$Introducir clave de autenticación$$$$.",
+        "authkey_dialog_title": "Iniciar sesión con clave de autenticación",
+        "authkey_input_tips": "Pega una clave de autenticación generada en la consola de administración de Tailscale (Settings → Keys) o por tu servidor Headscale ('headscale preauthkeys create'). El dispositivo inicia sesión de inmediato, sin el enlace del navegador.",
+        "authkey_err_msg": "Error al iniciar sesión con la clave de autenticación.",
+        "login_server_label": "Servidor de inicio de sesión personalizado (Headscale)",
+        "login_server_tips": "URL base de un servidor de control autoalojado como Headscale, p. ej. https://headscale.example.com. Déjalo vacío para usar el servicio oficial de Tailscale. Cambiarlo cierra la sesión del dispositivo en la red actual y deberás iniciar sesión de nuevo en el nuevo servidor."
     }
 }

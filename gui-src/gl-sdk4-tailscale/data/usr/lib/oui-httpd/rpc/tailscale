@@ -278,6 +278,8 @@ function M.get_config()
     -- longer forces one, so the panel can warn when neither source is present).
     res.binary_source = c:get("tailscale", "settings", "binary_source") or "feed"
     res.binary_present = fs.access("/usr/sbin/tailscaled")
+    -- Self-hosted control server (e.g. Headscale); empty = official Tailscale.
+    res.login_server = c:get("tailscale", "settings", "login_server") or ""
 
     if lanip and lanmask then
         local lan_info = lnet.ipcalc({lanip, lanmask})
@@ -348,6 +350,7 @@ function M.set_config(params)
     local keep_on_upgrade = params.keep_on_upgrade
     local killswitch = params.killswitch
     local exit_node_ip = params.exit_node_ip
+    local login_server = params.login_server
 
     -- Borrowed from GL 2026: refuse when OpenVPN TAP site-to-site is active, which is
     -- incompatible with the tailscale0 routing this sets up.
@@ -396,6 +399,15 @@ function M.set_config(params)
 
     if exit_node_ip ~= "" and exit_node_ip ~= nil and not validator.ip4addr(exit_node_ip) then
         return rpc.ERROR_CODE_INVALID_PARAMS, "invalid exit_node_ip"
+    end
+
+    -- Charset-restricted URL: gl_tailscale word-splits it into the `tailscale up`
+    -- argv, so no whitespace (argument injection) and no shell metacharacters.
+    if login_server ~= nil then
+        if type(login_server) ~= "string" or #login_server > 256
+            or (login_server ~= "" and not login_server:match("^https?://[%w%.%-:/_]+$")) then
+            return rpc.ERROR_CODE_INVALID_PARAMS, "invalid login_server"
+        end
     end
 
     local mode = c:get("glconfig", "general", "mode")
@@ -450,6 +462,27 @@ function M.set_config(params)
         c:set("tailscale", "settings", "killswitch", 0)
     end
 
+    -- nil (older panel that never sends it) leaves the control server unchanged;
+    -- "" reverts to the official Tailscale service. On a CHANGE, log the node out
+    -- first: tailscale refuses to switch --login-server while Running without
+    -- --force-reauth (cli/up.go), and a control-plane switch is a new identity
+    -- anyway -- the old network's login and exit nodes mean nothing on the new one.
+    -- From the logged-out state the restart below applies the new server cleanly
+    -- and the panel drops back to "login required".
+    if login_server ~= nil then
+        local prev = c:get("tailscale", "settings", "login_server") or ""
+        if login_server ~= prev then
+            c:set("tailscale", "settings", "login_server", login_server)
+            local p = ngx.pipe.spawn({"/usr/sbin/tailscale", "logout"})
+            if p then p:wait() end
+            local state_file = c:get("tailscale", "settings", "state_file")
+            if state_file then
+                os.remove(state_file)
+            end
+            exit_node_ip = ""
+        end
+    end
+
     if exit_node_ip then
         c:set("tailscale", "settings", "exit_node_ip", exit_node_ip)
     else
@@ -492,6 +525,61 @@ function M.logout()
         os.remove(state_file)
     end
     fs.sync()
+end
+
+--[[
+    @method-type: call
+    @method-name: login
+    @method-desc: Log in with a pre-generated auth key (Tailscale or Headscale preauthkey)
+
+    @in  string   auth_key    Auth key, e.g. tskey-auth-... or a Headscale preauthkey
+    @out number   ?err_code   Error code [-1:login failed]
+    @out string   ?err_msg    Error message
+
+    @in-example:  {"jsonrpc":"2.0","id":1,"method":"call","params":["","tailscale","login",{"auth_key":"tskey-auth-xxxx"}]}
+    @out-example: {"id":1,"jsonrpc":"2.0","result":[]}
+--]]
+function M.login(params)
+    local key = params.auth_key
+    -- Keys are opaque tokens (tskey-auth-... / Headscale hex); accept only token
+    -- characters. The key is transient: it rides argv into gl_tailscale, is spent
+    -- on one `up`, and is never stored (post-login auth lives in the state file).
+    if type(key) ~= "string" or #key == 0 or #key > 512
+        or not key:match("^[%w%-%._]+$") then
+        return rpc.ERROR_CODE_INVALID_PARAMS, "invalid auth_key"
+    end
+
+    local c = uci.cursor()
+    if c:get("tailscale", "settings", "enabled") ~= "1" then
+        return { err_code = -1, err_msg = "tailscale is not enabled" }
+    end
+
+    -- Synchronous: gl_tailscale restart runs `up --auth-key=...` bounded at 60s
+    -- and leaves the CLI's stderr in /tmp/ts_login_err for us. The panel calls
+    -- this rpc with a long client timeout.
+    os.remove("/tmp/ts_login_err")
+    local p = ngx.pipe.spawn({"/usr/bin/gl_tailscale", "restart", key})
+    if p then p:wait() end
+
+    -- Anything past NeedsLogin means the key was accepted (Running, or still
+    -- syncing the netmap, or waiting for machine authorization); the panel's
+    -- status poll takes it from there.
+    local r = tailscale_status("5", true)
+    local state = r and r.BackendState or ""
+    if state == "Running" or state == "Starting" or state == "NeedsMachineAuth" then
+        return {}
+    end
+
+    -- Still not logged in: surface the CLI's own first stderr line, which carries
+    -- the control server's reason (e.g. "backend error: invalid key: ...").
+    local msg
+    local ef = io.open("/tmp/ts_login_err", "r")
+    if ef then
+        msg = ef:read("*a")
+        ef:close()
+        msg = msg and msg:match("[^\r\n]+")
+    end
+    return { err_code = -1, err_msg = msg or "auth key login failed" }
 end
 
 --[[

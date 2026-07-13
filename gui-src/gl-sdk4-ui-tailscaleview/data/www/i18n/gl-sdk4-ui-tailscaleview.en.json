@@ -34,6 +34,12 @@
         "lan_gateway_label": "Allow LAN Devices to Use Tailscale",
         "lan_gateway_tips": "When enabled, devices on the LAN can reach the Tailscale network through this router without installing Tailscale on each device.",
         "advertise_exit_node_label": "Advertise as Exit Node",
-        "advertise_exit_node_tips": "When enabled, this router offers itself as a Tailscale exit node and routes internet traffic for your tailnet devices. You must approve it in the Tailscale admin console. It cannot be used at the same time as selecting an Exit Node above."
+        "advertise_exit_node_tips": "When enabled, this router offers itself as a Tailscale exit node and routes internet traffic for your tailnet devices. You must approve it in the Tailscale admin console. It cannot be used at the same time as selecting an Exit Node above.",
+        "authkey_tips": "Alternatively, log in with a pre-generated auth key: $$$$Enter Auth Key$$$$.",
+        "authkey_dialog_title": "Log In with Auth Key",
+        "authkey_input_tips": "Paste an auth key generated in the Tailscale admin console (Settings → Keys) or by your Headscale server ('headscale preauthkeys create'). The device logs in immediately, without the browser link.",
+        "authkey_err_msg": "Auth key login failed.",
+        "login_server_label": "Custom Login Server (Headscale)",
+        "login_server_tips": "Base URL of a self-hosted control server such as Headscale, e.g. https://headscale.example.com. Leave empty to use the official Tailscale service. Changing it logs the device out of the current network, and you must log in again on the new server."
     }
 }

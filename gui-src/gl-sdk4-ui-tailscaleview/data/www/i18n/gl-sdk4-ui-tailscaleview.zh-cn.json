@@ -34,6 +34,12 @@
         "lan_gateway_label": "允许 LAN 设备使用 Tailscale",
         "lan_gateway_tips": "若此选项启用，LAN 内的设备无需自行安装 Tailscale，即可通过本路由器访问 Tailscale 虚拟网络。",
         "advertise_exit_node_label": "宣告为出口节点",
-        "advertise_exit_node_tips": "若此选项启用，本路由器将作为 Tailscale 出口节点，为 tailnet 内的设备转发互联网流量。需在 Tailscale 管理控制台中批准。不能与上方选择出口节点同时使用。"
+        "advertise_exit_node_tips": "若此选项启用，本路由器将作为 Tailscale 出口节点，为 tailnet 内的设备转发互联网流量。需在 Tailscale 管理控制台中批准。不能与上方选择出口节点同时使用。",
+        "authkey_tips": "也可以使用预先生成的授权密钥登录：$$$$输入授权密钥$$$$。",
+        "authkey_dialog_title": "使用授权密钥登录",
+        "authkey_input_tips": "粘贴在 Tailscale 管理控制台（Settings → Keys）或 Headscale 服务器（'headscale preauthkeys create'）中生成的授权密钥。设备将立即登录，无需浏览器链接。",
+        "authkey_err_msg": "授权密钥登录失败。",
+        "login_server_label": "自定义登录服务器（Headscale）",
+        "login_server_tips": "自建控制服务器（如 Headscale）的基础 URL，例如 https://headscale.example.com。留空则使用官方 Tailscale 服务。更改后设备将退出当前网络，需要在新服务器上重新登录。"
     }
 }

@@ -34,6 +34,12 @@
         "lan_gateway_label": "LAN-Geräten Zugriff auf Tailscale erlauben",
         "lan_gateway_tips": "Wenn diese Option aktiviert ist, können Geräte im LAN über diesen Router auf das Tailscale-Netzwerk zugreifen, ohne selbst Tailscale zu installieren.",
         "advertise_exit_node_label": "Als Ausgangspunkt anbieten",
-        "advertise_exit_node_tips": "Wenn aktiviert, bietet sich dieser Router als Tailscale-Ausgangspunkt an und leitet den Internetverkehr für deine Tailnet-Geräte weiter. Du musst ihn in der Tailscale-Admin-Konsole genehmigen. Kann nicht gleichzeitig mit der Auswahl eines Ausgangspunkts oben verwendet werden."
+        "advertise_exit_node_tips": "Wenn aktiviert, bietet sich dieser Router als Tailscale-Ausgangspunkt an und leitet den Internetverkehr für deine Tailnet-Geräte weiter. Du musst ihn in der Tailscale-Admin-Konsole genehmigen. Kann nicht gleichzeitig mit der Auswahl eines Ausgangspunkts oben verwendet werden.",
+        "authkey_tips": "Alternativ kannst du dich mit einem vorab erzeugten Auth-Key anmelden: $$$$Auth-Key eingeben$$$$.",
+        "authkey_dialog_title": "Mit Auth-Key anmelden",
+        "authkey_input_tips": "Füge einen Auth-Key ein, der in der Tailscale-Admin-Konsole (Settings → Keys) oder von deinem Headscale-Server ('headscale preauthkeys create') erzeugt wurde. Das Gerät meldet sich sofort an, ohne den Browser-Link.",
+        "authkey_err_msg": "Anmeldung mit Auth-Key fehlgeschlagen.",
+        "login_server_label": "Eigener Login-Server (Headscale)",
+        "login_server_tips": "Basis-URL eines selbst gehosteten Control-Servers wie Headscale, z. B. https://headscale.example.com. Leer lassen, um den offiziellen Tailscale-Dienst zu verwenden. Eine Änderung meldet das Gerät vom aktuellen Netzwerk ab; auf dem neuen Server musst du dich erneut anmelden."
     }
 }
