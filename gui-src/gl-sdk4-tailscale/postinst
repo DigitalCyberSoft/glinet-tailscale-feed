@@ -12,6 +12,17 @@ if [ -x /etc/init.d/tailscale ]; then
 fi
 /etc/init.d/rpcd restart 2>/dev/null
 
+# The panel's /rpc actually runs in nginx's Lua workers (openresty), NOT rpcd:
+# GL's oui.rpc M.call dofile()s /usr/lib/oui-httpd/rpc/<object> once per worker
+# and caches the function table forever (objects[object] in
+# /usr/lib/lua/oui/rpc.lua, GL 4.8.3). After an upgrade the workers keep serving
+# the OLD handler, so methods added by the new version return "method not found"
+# (bit 1.3.0-1's `login` live). Only a full restart (new master, fresh Lua VMs)
+# clears it -- `nginx -s reload` does not reliably drop the Lua cache on GL.
+# Cost: the admin web session drops and the user logs back into the panel; the
+# in-panel updater runs detached (glits-upgrade) so it survives this.
+[ -x /etc/init.d/nginx ] && /etc/init.d/nginx restart 2>/dev/null
+
 # Preserve the Tailscale stack across firmware upgrades when the panel toggle
 # settings.keep_on_upgrade is on (default on). gl_tailscale writes or removes the
 # managed /etc/sysupgrade.conf block per that flag; see apply_keep_on_upgrade there.
