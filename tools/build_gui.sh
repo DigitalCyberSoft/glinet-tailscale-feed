@@ -54,6 +54,13 @@ pack() { # $1 = package source dir name
   # control.tar.gz: control (644) + maintainer scripts (755) if present
   cp "$src/control" "$work/ctrl/control"; chmod 644 "$work/ctrl/control"
   local members="./control" s
+  # conffiles marker: without it opkg treats /etc/config/* as plain payload and
+  # OVERWRITES user settings on every upgrade (bit gl-sdk4-tailscale through
+  # 1.3.1-1: every update silently reset the panel toggles to defaults).
+  if [ -f "$src/conffiles" ]; then
+    cp "$src/conffiles" "$work/ctrl/conffiles"; chmod 644 "$work/ctrl/conffiles"
+    members="$members ./conffiles"
+  fi
   for s in preinst postinst prerm postrm; do
     if [ -f "$src/$s" ]; then cp "$src/$s" "$work/ctrl/$s"; chmod 755 "$work/ctrl/$s"; members="$members ./$s"; fi
   done

@@ -525,6 +525,14 @@ function M.logout()
         os.remove(state_file)
     end
     fs.sync()
+    -- Re-seed the daemon's pending prefs from uci. logout + state removal wiped
+    -- them, and nothing else runs a param-carrying `up` before the next browser
+    -- login completes -- get_auth_url's fast path deliberately avoids the restart
+    -- -- so a re-login would come up with DEFAULT prefs (no advertised routes, no
+    -- exit node) while the panel still shows the configured toggles. Detached like
+    -- set_config: a full restart takes ~50s on mips and the panel should not hang
+    -- on Unbind. Also regenerates a fresh AuthURL for the fast path to hand out.
+    ngx.pipe.spawn({"/usr/bin/gl_tailscale", "restart"})
 end
 
 --[[
