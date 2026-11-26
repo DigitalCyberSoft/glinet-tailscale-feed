@@ -58,7 +58,10 @@ die()  { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 head_() { printf '\n== %s ==\n' "$*" >&2; }
 
 command -v opkg >/dev/null 2>&1 || die "opkg not found -- this is not an OpenWrt/GL.iNet device."
-command -v curl >/dev/null 2>&1 || die "curl not found. Install it: opkg update && opkg install curl"
+# ';' not '&&' in the hint: opkg update exits non-zero when any configured feed is
+# unsigned (this one from an earlier run, or another custom feed), which would stop
+# an '&&' chain before the install.
+command -v curl >/dev/null 2>&1 || die "curl not found. Install it: opkg update; opkg install curl"
 if [ "$DRY" = 0 ] && [ "$(id -u)" != 0 ]; then
 	die "run as root (installing packages). Use --dry-run to inspect without root."
 fi
@@ -244,9 +247,12 @@ log "  feed line written."
 
 # `opkg update` returns nonzero because the unsigned-feed sig 404s (expected).
 # --force-signature keeps our Packages list from being deleted; we then confirm
-# the list is really present rather than trusting the exit code.
+# the list is really present rather than trusting the exit code. Test the list FILE:
+# `opkg info <pkg>` can never fail here -- GL's opkg exits 0 even for a package no
+# list carries, and on a re-run it matches the already-installed entry anyway.
 opkg update --force-signature || log "  (opkg update reported errors; verifying our feed anyway)"
-if ! opkg info tailscale >/dev/null 2>&1 && ! opkg info tailscale-micro >/dev/null 2>&1; then
+LISTS_DIR=$(awk '$1=="lists_dir" {print $NF}' /etc/opkg.conf 2>/dev/null) || LISTS_DIR=""
+if [ ! -s "${LISTS_DIR:-/var/opkg-lists}/$FEED_NAME" ]; then
 	die "feed package list not available after update. Check the router's DNS/network
 and that $BASE/$ARCH/Packages is reachable."
 fi

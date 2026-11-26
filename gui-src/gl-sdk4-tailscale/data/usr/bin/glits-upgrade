@@ -16,8 +16,20 @@
 #   feed         -> opkg install the tailscale / tailscale-micro package
 #   admonstrator -> ts-admon-update (their build is not opkg-managed)
 
+# A forced update exits non-zero whenever any configured feed is unsigned (ours always
+# is), so its exit code says nothing; check that OUR list file landed instead. Not
+# `opkg info gl-sdk4-tailscale`: this script ships in that package, so the installed
+# entry always matches (and GL's opkg exits 0 even for unknown packages) -- a missing
+# list fell through to "nothing to do", exit 0. The feed is located by URL, as rpc
+# check_update does, because its name in customfeeds.conf is the installer's choice.
 opkg update --force-signature >/dev/null 2>&1 || true
-if ! opkg info gl-sdk4-tailscale >/dev/null 2>&1; then
+FEED=$(awk '$1 ~ /^src/ && $3 ~ /glinet-tailscale-feed/ {print $2; exit}' /etc/opkg/customfeeds.conf 2>/dev/null)
+LISTS_DIR=$(awk '$1=="lists_dir" {print $NF}' /etc/opkg.conf 2>/dev/null)
+if [ -z "$FEED" ]; then
+    echo "glits-upgrade: no glinet-tailscale-feed line in /etc/opkg/customfeeds.conf" >&2
+    exit 1
+fi
+if [ ! -s "${LISTS_DIR:-/var/opkg-lists}/$FEED" ]; then
     echo "glits-upgrade: feed package list unavailable; check network/DNS" >&2
     exit 1
 fi
