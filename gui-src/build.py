@@ -78,6 +78,14 @@ def build(pkgdir):
         cdir = os.path.join(work, "control"); os.makedirs(cdir)
         with open(os.path.join(cdir, "control"), "w") as f:
             f.write(ctrl)
+        # conffiles marker: without it opkg treats /etc/config/* as plain payload and
+        # OVERWRITES user settings on every upgrade. tools/build_gui.sh gained this in
+        # dd25899 (glue 1:1.3.2-1); this builder lacked it, so building per README
+        # silently brought the settings-reset bug back.
+        cf = os.path.join(pkgdir, "conffiles")
+        if os.path.exists(cf):
+            shutil.copyfile(cf, os.path.join(cdir, "conffiles"))
+            os.chmod(os.path.join(cdir, "conffiles"), 0o644)
         # optional control scripts: ship <pkgdir>/postinst (etc.) in control.tar.gz
         for script in ("preinst", "postinst", "prerm", "postrm"):
             sp = os.path.join(pkgdir, script)
